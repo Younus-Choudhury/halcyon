@@ -1,5 +1,4 @@
 import { Desk } from "@/components/desk";
-import { PRICE_CHECKED_ON } from "@/data/holidays";
 
 export default function Home() {
   return (
@@ -11,8 +10,8 @@ export default function Home() {
             <h1 className="font-heading text-5xl tracking-tight sm:text-6xl">Halcyon</h1>
           </div>
           <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-            Three holidays from London, chosen from prices I looked up on {PRICE_CHECKED_ON}.
-            Each card links to the listing. Fares move, and I have not invented the ones that were missing.
+            Three holidays from London. Every shortlist searches the web at the moment you ask,
+            then reads a per-person fare from what comes back.
           </p>
         </div>
       </header>

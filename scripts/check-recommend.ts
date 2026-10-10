@@ -1,100 +1,76 @@
 import assert from "node:assert/strict";
-import { recommend } from "../src/lib/recommend";
+import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
+import type { Brief } from "../src/lib/brief";
 
-const ski = recommend({
-  year: 2027,
-  month: 1,
-  nights: 7,
-  adults: 2,
-  children: 0,
-  budget: 800,
-  style: "ski",
-});
-assert.equal(ski.results[0]?.holiday.id, "les-deux-alpes-serre-palas");
-assert.equal(ski.results[0]?.fit, "clean");
-assert.equal(ski.results[0]?.quote.perAdult, 556);
-assert.ok(ski.results.some((result) => result.holiday.id === "les-deux-alpes-brunerie"));
+const mixed =
+  "WAS £899.00 p.p. Deposit from only £199 per person. The week is £599 per person in February.";
+const price = extractPrice(mixed);
+if (!price) throw new Error("expected a price");
+assert.equal(price.amount, 599);
+assert.match(price.sentence, /£599/);
 
-const beach = recommend({
-  year: 2027,
-  month: 5,
-  nights: 7,
-  adults: 2,
-  children: 0,
-  budget: 600,
-  style: "beach",
-});
-assert.equal(beach.results[0]?.holiday.id, "majorca-sol-house");
-assert.equal(beach.results[0]?.fit, "clean");
-assert.equal(beach.results[0]?.quote.perAdult, 534);
+assert.equal(extractPrice("Flights from £40. Deposit £60pp.")?.amount ?? null, null);
 
-const family = recommend({
+const februaryRange =
+  "Tenerife holidays 2027 cost from £600 per person in low season, February half-term £900–£1,300, and five-star hotels from £1,100.";
+const february = extractPrice(februaryRange, 2);
+if (!february) throw new Error("expected a February price");
+assert.equal(february.amount, 900);
+
+const html = `
+<a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Flanzarote&amp;rut=abc" class='result-link'>7 nights in Lanzarote from London</a>
+<td class='result-snippet'>February 2027, 7 nights, flights from London, £480 per person.</td>
+<a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FLanzarote" class='result-link'>Lanzarote</a>
+<td class='result-snippet'>An island. Holidays from £100 per person.</td>
+`;
+const hits = parseLiteHtml(html, "lanzarote february");
+assert.equal(hits.length, 1);
+assert.equal(hits[0]?.price.amount, 480);
+assert.equal(hits[0]?.url, "https://example.com/lanzarote");
+
+const brief: Brief = {
   year: 2027,
   month: 2,
-  nights: 2,
-  adults: 2,
-  children: 2,
-  budget: 900,
-  style: "family",
-});
-assert.equal(family.results[0]?.holiday.id, "disneyland-hotel");
-assert.equal(family.results[0]?.fit, "clean");
-assert.equal(family.results[0]?.quote.perAdult, 650);
-assert.equal(family.results[0]?.quote.perChild, 400);
-assert.equal(family.results[0]?.quote.partyTotal, 2100);
-
-const markets = recommend({
-  year: 2026,
-  month: 12,
-  nights: 4,
+  nights: 7,
   adults: 2,
   children: 0,
   budget: 500,
-  style: "food",
-});
-assert.equal(markets.results[0]?.holiday.id, "vienna-budapest");
-assert.equal(markets.results[0]?.fit, "clean");
-assert.equal(markets.results[0]?.quote.partyTotal, 898);
-
-const winter = recommend({
-  year: 2027,
-  month: 2,
-  nights: 7,
-  adults: 2,
-  children: 0,
-  budget: 700,
   style: "winter-sun",
-});
-assert.equal(winter.results[0]?.holiday.id, "marrakech-agadir");
-assert.equal(winter.results[0]?.quote.perAdult, 559);
-assert.equal(winter.results[0]?.fit, "clean");
-
-const nothing = recommend({
-  year: 2027,
-  month: 7,
-  nights: 7,
-  adults: 2,
-  children: 0,
-  budget: 100,
-  style: "ski",
-});
-assert.equal(nothing.cleanCount, 0);
-assert.equal(nothing.results.length, 3);
-assert.match(nothing.intro, /Nothing on the desk/);
-
-const coupleSki = recommend({
-  year: 2026,
-  month: 12,
-  nights: 7,
-  adults: 2,
-  children: 1,
-  budget: 1200,
-  style: "family",
-});
-const cretes = coupleSki.results.find((result) => result.holiday.id === "les-deux-alpes-cretes");
-if (cretes) {
-  assert.equal(cretes.fit, "close");
-  assert.equal(cretes.quote.partyTotal, null);
-}
+};
+const shortlist = chooseHolidays(
+  [
+    ...hits,
+    {
+      title: "Same site again",
+      url: "https://example.com/other",
+      snippet: "February 2027, 7 nights, £300 per person from London.",
+      query: "second",
+      price: { amount: 300, sentence: "£300 per person" },
+    },
+    {
+      title: "Crete week",
+      url: "https://other.example/crete",
+      snippet: "May only, 7 nights, £420 per person.",
+      query: "third",
+      price: { amount: 420, sentence: "£420 per person" },
+    },
+    {
+      title: "Lisbon week",
+      url: "https://city.example/lisbon",
+      snippet: "February 2027, 7 nights, £450 per person from London.",
+      query: "fourth",
+      price: { amount: 450, sentence: "£450 per person" },
+    },
+  ],
+  brief,
+  "10 October 2026, 21:30",
+  ["one", "two", "three"],
+);
+assert.equal(shortlist.results[0]?.url, "https://example.com/other");
+assert.equal(shortlist.results[0]?.fit, "clean");
+assert.equal(shortlist.results[0]?.partyTotal, 600);
+const crete = shortlist.results.find((result) => result.host === "other.example");
+assert.equal(crete?.fit, "close");
+assert.equal(shortlist.results.filter((result) => result.host === "example.com").length, 1);
 
 console.log("recommend checks passed");

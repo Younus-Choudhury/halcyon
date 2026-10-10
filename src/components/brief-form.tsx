@@ -1,7 +1,6 @@
 "use client";
 
-import { STYLE_OPTIONS, type TripStyle } from "@/data/holidays";
-import { monthOptions, type Brief } from "@/lib/recommend";
+import { monthOptions, STYLE_OPTIONS, type Brief, type TripStyle } from "@/lib/brief";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +18,13 @@ const NIGHTS = [2, 3, 4, 5, 7, 10, 14];
 export function BriefForm({
   brief,
   error,
+  pending,
   onChange,
   onSubmit,
 }: {
   brief: Brief;
   error: string | null;
+  pending: boolean;
   onChange: (brief: Brief) => void;
   onSubmit: () => void;
 }) {
@@ -40,7 +41,7 @@ export function BriefForm({
       <div>
         <h2 className="font-heading text-2xl tracking-tight">The brief</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          London departures. Prices were read from the listings on 10 October 2026.
+          London departures. Asking again runs three new searches. Prices are not kept from last time.
         </p>
       </div>
 
@@ -205,8 +206,8 @@ export function BriefForm({
         </p>
       ) : null}
 
-      <Button type="submit" size="lg" className="h-11 w-full">
-        Shortlist three holidays
+      <Button type="submit" size="lg" className="h-11 w-full" disabled={pending}>
+        {pending ? "Searching current prices" : "Shortlist three holidays"}
       </Button>
     </form>
   );
