@@ -1,7 +1,20 @@
 import { gbp } from "@/lib/brief";
 import type { FoundHoliday } from "@/lib/rank";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { ChevronRight } from "lucide-react";
+
+function fitLabel(fit: FoundHoliday["fit"]): string {
+  if (fit === "clean") return "Fits this brief";
+  if (fit === "over") return "Over your budget";
+  if (fit === "wrong-month") return "Different month";
+  if (fit === "elsewhere") return "Not from London";
+  return "No date on this fare";
+}
+
+function fitClass(fit: FoundHoliday["fit"]): string {
+  if (fit === "clean") return "bg-primary/12 text-primary";
+  if (fit === "over") return "bg-mark/12 text-mark";
+  return "bg-foreground/[0.06] text-muted-foreground";
+}
 
 export function HolidayCard({
   result,
@@ -13,92 +26,85 @@ export function HolidayCard({
   searchedAt: string;
 }) {
   return (
-    <article className="rounded-2xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="font-heading text-sm text-mark">{String(rank).padStart(2, "0")}</p>
-          <h3 className="font-heading mt-1 text-3xl tracking-tight">{result.title}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{result.host}</p>
+    <article className="overflow-hidden rounded-[1.35rem] bg-white shadow-[0_1px_0_oklch(0.2_0.02_60_/_0.04),0_12px_32px_oklch(0.3_0.02_60_/_0.08)]">
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[12px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            {String(rank).padStart(2, "0")}
+          </p>
+          <div className="text-right">
+            <p className="font-heading text-[1.7rem] leading-none font-medium tracking-tight text-[oklch(0.2_0.02_55)]">
+              {gbp(result.pricePerPerson)}
+            </p>
+            <p className="mt-1 text-[12px] text-muted-foreground">a person</p>
+          </div>
         </div>
-        <div className="text-left sm:text-right">
-          <p className="font-heading text-3xl tracking-tight">{gbp(result.pricePerPerson)}</p>
-          <p className="text-sm text-muted-foreground">a person</p>
+        <h3 className="font-heading mt-2 text-[1.65rem] leading-tight font-medium tracking-tight text-[oklch(0.2_0.02_55)]">
+          {result.title}
+        </h3>
+        <p className="mt-1 text-[13px] text-muted-foreground">{result.host}</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${fitClass(result.fit)}`}>
+            {fitLabel(result.fit)}
+          </span>
+          <span className="rounded-full bg-foreground/[0.05] px-2.5 py-1 text-[12px] font-medium text-muted-foreground">
+            {result.priceSource === "listing" ? "Read on the listing" : "Price in the search result"}
+          </span>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Badge variant={result.fit === "clean" ? "default" : "outline"}>
-          {result.fit === "clean"
-            ? "Fits this brief"
-            : result.fit === "over"
-              ? "Over your budget"
-              : result.fit === "wrong-month"
-                ? "Different month"
-                : result.fit === "elsewhere"
-                  ? "Not from London"
-                  : "No date on this fare"}
-        </Badge>
-        <Badge variant="secondary">
-          {result.priceSource === "listing" ? "Read on the listing" : "Price in the search result"}
-        </Badge>
-      </div>
-
-      {result.why ? (
-        <div className="mt-4">
-          <h4 className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
-            Why this place
-          </h4>
-          <p className="mt-2 text-sm leading-relaxed">{result.why}</p>
-        </div>
-      ) : null}
-
-      <p className="mt-4 text-sm leading-relaxed">{result.fitNote}</p>
-
-      <Separator className="my-5" />
-
-      <div className="grid gap-5 md:grid-cols-[1.2fr_0.8fr]">
+      <div className="space-y-3 border-t border-foreground/8 px-4 py-3.5">
+        {result.why ? (
+          <div>
+            <h4 className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+              Why this place
+            </h4>
+            <p className="mt-1.5 text-[14px] leading-relaxed">{result.why}</p>
+          </div>
+        ) : null}
         <div>
-          <h4 className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
+          <h4 className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
             What the search said
           </h4>
-          <p className="mt-2 text-sm leading-relaxed">{result.snippet}</p>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{result.priceSentence}</p>
+          <p className="mt-1.5 text-[14px] leading-relaxed">{result.snippet}</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{result.priceSentence}</p>
+          <p className="mt-2 text-[14px] leading-relaxed">{result.fitNote}</p>
         </div>
         <div>
-          <h4 className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
+          <h4 className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
             For your party
           </h4>
-          <p className="font-heading mt-2 text-2xl">{gbp(result.partyTotal)}</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{result.partyNote}</p>
+          <p className="font-heading mt-1 text-[1.45rem] tracking-tight">{gbp(result.partyTotal)}</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{result.partyNote}</p>
         </div>
       </div>
 
-      <div className="mt-5">
-        <h4 className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Source</h4>
-        <p className="mt-2 text-sm leading-relaxed">
-          <a
-            href={result.url}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-primary underline decoration-primary/30 underline-offset-4"
-          >
-            {result.host}
-          </a>
-          <span className="text-muted-foreground"> · searched {searchedAt}</span>
-        </p>
-        <p className="mt-1 break-all text-sm leading-relaxed">
-          <a href={result.url} target="_blank" rel="noreferrer" className="text-primary">
-            {result.url}
-          </a>
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+      <a
+        href={result.url}
+        target="_blank"
+        rel="noreferrer"
+        className="block border-t border-foreground/8 px-4 py-3.5 transition-colors active:bg-foreground/[0.03]"
+      >
+        <span className="flex items-center justify-between gap-3">
+          <span>
+            <span className="block text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+              Source
+            </span>
+            <span className="mt-1 block text-[15px] font-semibold text-primary">{result.host}</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-primary/70" aria-hidden />
+        </span>
+        <span className="mt-1.5 block text-[13px] leading-relaxed break-all text-primary/80">{result.url}</span>
+        <span className="mt-2 block text-[12px] leading-relaxed text-muted-foreground">
           {result.priceSource === "listing"
-            ? "The price was read on that page just now."
-            : "The price is the one printed in the search result for that page. Open it before you book."}
-        </p>
-      </div>
-      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-        Prompt: {result.searchQuery}
+            ? `The price was read on that page. Searched ${searchedAt}.`
+            : `The price is the one printed in the search result. Open it before you book. Searched ${searchedAt}.`}
+        </span>
+      </a>
+
+      <p className="border-t border-foreground/8 px-4 py-3 text-[12px] leading-relaxed text-muted-foreground">
+        <span className="font-semibold tracking-[0.14em] uppercase">Prompt </span>
+        {result.searchQuery}
       </p>
     </article>
   );

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -15,7 +15,14 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Halcyon — a holiday desk",
   description:
-    "Three holidays from London, shortlisted from prices looked up on public listings.",
+    "Eight short questions, then three holidays from London with fares read from live listings.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f6f3ec",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -24,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-background text-foreground">{children}</body>
+      <body className="min-h-dvh bg-[#e6dfd2] text-foreground">{children}</body>
     </html>
   );
 }
