@@ -41,7 +41,7 @@ export function BriefForm({
       <div>
         <h2 className="font-heading text-2xl tracking-tight">The brief</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          London departures. Asking again runs three new searches. Prices are not kept from last time.
+          London departures. Answer the four questions beside this, then ask. Each shortlist searches again.
         </p>
       </div>
 
@@ -110,8 +110,8 @@ export function BriefForm({
                 const next = value.replace(/[^\d]/g, "");
                 onChange({ ...brief, budget: next ? Number(next) : 0 });
               }}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? "budget-error" : undefined}
+              aria-invalid={error?.toLowerCase().includes("budget") ? true : undefined}
+              aria-describedby={error?.toLowerCase().includes("budget") ? "budget-error" : undefined}
             />
           </div>
         </div>

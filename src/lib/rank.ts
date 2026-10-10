@@ -1,4 +1,4 @@
-import { gbp, monthName, monthYear, styleLabel, type Brief } from "@/lib/brief";
+import { gbp, monthName, monthYear, personalityPortrait, styleLabel, type Brief } from "@/lib/brief";
 
 export type PriceMention = {
   amount: number;
@@ -354,7 +354,7 @@ export function chooseHolidays(
 
   const cleanCount = dated.filter((result) => result.fit === "clean").length;
   const when = monthYear(brief.year, brief.month);
-  const request = `a ${styleLabel(brief.style)} trip in ${when} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"}${brief.children ? ` and ${brief.children} ${brief.children === 1 ? "child" : "children"}` : ""}, about ${brief.nights} nights, up to ${gbp(brief.budget)} a person, from London`;
+  const request = `a ${styleLabel(brief.style)} trip in ${when} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"}${brief.children ? ` and ${brief.children} ${brief.children === 1 ? "child" : "children"}` : ""}, about ${brief.nights} nights, up to ${gbp(brief.budget)} a person, from London. ${personalityPortrait(brief)}`;
   const missed = queries
     .filter((query) => !dated.some((result) => result.searchQuery === query))
     .map((query) => query.split(/ \d+ nights/)[0] ?? query);

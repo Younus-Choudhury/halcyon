@@ -9,4 +9,4 @@ npm install
 npm run dev
 ```
 
-Open the URL Next prints. Choose a month, a party, a budget and a style, then shortlist three holidays. The search needs a network connection.
+Open the URL Next prints. Choose a month, a party, a budget and a style, then answer the four questions about how you like a holiday. Those answers change the places that get searched. The search needs a network connection.

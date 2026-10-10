@@ -6,6 +6,11 @@ export type TripStyle =
   | "family"
   | "food";
 
+export type Pace = "slow" | "mixed" | "full";
+export type Company = "quiet" | "either" | "lively";
+export type Comfort = "simple" | "either" | "treat";
+export type Plan = "loose" | "either" | "booked";
+
 export type Brief = {
   year: number;
   month: number;
@@ -14,7 +19,56 @@ export type Brief = {
   children: number;
   budget: number;
   style: TripStyle;
+  pace: Pace | null;
+  company: Company | null;
+  comfort: Comfort | null;
+  plan: Plan | null;
 };
+
+export type PersonalityQuestion = {
+  id: "pace" | "company" | "comfort" | "plan";
+  prompt: string;
+  options: { id: string; label: string; hint: string }[];
+};
+
+export const PERSONALITY_QUESTIONS: PersonalityQuestion[] = [
+  {
+    id: "pace",
+    prompt: "How do you want the days to feel?",
+    options: [
+      { id: "slow", label: "Slow", hint: "A book, a swim, nowhere to be" },
+      { id: "mixed", label: "A bit of both", hint: "One outing, then nothing" },
+      { id: "full", label: "Full", hint: "Out after breakfast" },
+    ],
+  },
+  {
+    id: "company",
+    prompt: "Who else should be around?",
+    options: [
+      { id: "quiet", label: "Quiet", hint: "Your own terrace" },
+      { id: "either", label: "Don't mind", hint: "Either is fine" },
+      { id: "lively", label: "Lively", hint: "People, music, a bar" },
+    ],
+  },
+  {
+    id: "comfort",
+    prompt: "What should the room be?",
+    options: [
+      { id: "simple", label: "Simple", hint: "Clean, and the money spent elsewhere" },
+      { id: "either", label: "Either", hint: "A decent bed is enough" },
+      { id: "treat", label: "A treat", hint: "The good hotel" },
+    ],
+  },
+  {
+    id: "plan",
+    prompt: "How fixed is the plan?",
+    options: [
+      { id: "loose", label: "Loose", hint: "Decide on the day" },
+      { id: "either", label: "Some of each", hint: "A few bookings, then free" },
+      { id: "booked", label: "Booked", hint: "Know what is on" },
+    ],
+  },
+];
 
 export const STYLE_OPTIONS: { id: TripStyle; label: string; hint: string }[] = [
   { id: "winter-sun", label: "Winter sun", hint: "Warmth while London is grey" },
@@ -47,6 +101,24 @@ const STYLE_PLACES: Record<TripStyle, [string, string, string]> = {
   ski: ["Les Deux Alpes", "Val Thorens", "Mayrhofen"],
   family: ["Disneyland Paris", "Majorca family", "Tenerife family"],
   food: ["Marrakech", "Bologna", "Lisbon"],
+};
+
+const QUIET_PLACES: Record<TripStyle, [string, string, string]> = {
+  "winter-sun": ["Lanzarote", "Fuerteventura", "Madeira"],
+  city: ["Lisbon", "Seville", "Bologna"],
+  beach: ["Algarve", "Menorca", "Corsica"],
+  ski: ["Lech", "Zermatt", "Courchevel"],
+  family: ["Center Parcs", "Menorca", "Madeira"],
+  food: ["Bologna", "Lyon", "San Sebastian"],
+};
+
+const LIVELY_PLACES: Record<TripStyle, [string, string, string]> = {
+  "winter-sun": ["Tenerife", "Gran Canaria", "Dubai"],
+  city: ["Barcelona", "Rome", "Berlin"],
+  beach: ["Ibiza", "Majorca", "Ayia Napa"],
+  ski: ["Val Thorens", "Mayrhofen", "Ischgl"],
+  family: ["Disneyland Paris", "Majorca", "Algarve"],
+  food: ["Barcelona", "Rome", "Marrakech"],
 };
 
 export function monthName(month: number): string {
@@ -87,11 +159,59 @@ export function styleLabel(style: TripStyle): string {
   return STYLE_OPTIONS.find((option) => option.id === style)?.label.toLowerCase() ?? style;
 }
 
+function placesFor(brief: Brief): [string, string, string] {
+  if (brief.company === "quiet") return QUIET_PLACES[brief.style];
+  if (brief.company === "lively") return LIVELY_PLACES[brief.style];
+  return STYLE_PLACES[brief.style];
+}
+
+export function personalityWords(brief: Brief): string {
+  const words: string[] = [];
+  if (brief.pace === "slow") words.push("relaxing");
+  if (brief.pace === "full") words.push("busy");
+  if (brief.company === "quiet") words.push("quiet");
+  if (brief.company === "lively") words.push("lively");
+  if (brief.comfort === "treat") words.push("luxury");
+  if (brief.comfort === "simple") words.push("good value");
+  if (brief.plan === "booked") words.push("itinerary");
+  return words.slice(0, 2).join(" ");
+}
+
+export function personalityPortrait(brief: Brief): string {
+  const pace =
+    brief.pace === "slow"
+      ? "slow days"
+      : brief.pace === "full"
+        ? "full days"
+        : "a mix of rest and plans";
+  const company =
+    brief.company === "quiet"
+      ? "a quiet stay"
+      : brief.company === "lively"
+        ? "people around"
+        : "no strong feeling about the crowd";
+  const comfort =
+    brief.comfort === "simple"
+      ? "a simple room"
+      : brief.comfort === "treat"
+        ? "a treat of a hotel"
+        : "an ordinary comfortable room";
+  const plan =
+    brief.plan === "loose"
+      ? "a loose plan"
+      : brief.plan === "booked"
+        ? "the days booked"
+        : "a few plans and the rest free";
+  return `You want ${pace}, ${company}, ${comfort}, and ${plan}.`;
+}
+
 export function searchQueries(brief: Brief): string[] {
   const when = monthYear(brief.year, brief.month);
-  return STYLE_PLACES[brief.style].map(
+  const tone = personalityWords(brief);
+  const toneText = tone ? `${tone} ` : "";
+  return placesFor(brief).map(
     (place) =>
-      `${place} ${brief.nights} nights holiday from London ${when} £ per person`,
+      `${place} ${brief.nights} nights ${toneText}holiday from London ${when} £ per person`,
   );
 }
 
@@ -116,6 +236,9 @@ export function isBrief(value: unknown): value is Brief {
     brief.budget >= 50 &&
     brief.budget <= 20000 &&
     typeof brief.style === "string" &&
-    STYLE_OPTIONS.some((option) => option.id === brief.style)
+    STYLE_OPTIONS.some((option) => option.id === brief.style) &&
+    PERSONALITY_QUESTIONS.every((question) =>
+      question.options.some((option) => option.id === brief[question.id]),
+    )
   );
 }

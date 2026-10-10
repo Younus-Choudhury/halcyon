@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
-import type { Brief } from "../src/lib/brief";
+import { searchQueries, type Brief } from "../src/lib/brief";
 
 const mixed =
   "WAS £899.00 p.p. Deposit from only £199 per person. The week is £599 per person in February.";
@@ -36,6 +36,10 @@ const brief: Brief = {
   children: 0,
   budget: 500,
   style: "winter-sun",
+  pace: "slow",
+  company: "quiet",
+  comfort: "simple",
+  plan: "loose",
 };
 const shortlist = chooseHolidays(
   [
@@ -103,5 +107,11 @@ assert.doesNotMatch(over.results[0]?.fitNote ?? "", /close enough|Fits/);
 assert.equal(over.results.find((result) => result.title.includes("May")), undefined);
 assert.equal(over.cleanCount, 0);
 assert.match(over.intro, /Gran Canaria|gran/i);
+
+const quietBeach = searchQueries({ ...brief, style: "beach", company: "quiet", pace: "slow" });
+assert.match(quietBeach[0] ?? "", /^Algarve /);
+assert.match(quietBeach.join(" "), /relaxing quiet/);
+const livelyBeach = searchQueries({ ...brief, style: "beach", company: "lively", pace: "full" });
+assert.match(livelyBeach[0] ?? "", /^Ibiza /);
 
 console.log("recommend checks passed");

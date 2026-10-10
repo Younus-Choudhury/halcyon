@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { BriefForm } from "@/components/brief-form";
 import { HolidayCard } from "@/components/holiday-card";
-import { searchQueries, type Brief } from "@/lib/brief";
+import { PersonalityQuestionnaire } from "@/components/personality";
+import { PERSONALITY_QUESTIONS, searchQueries, type Brief } from "@/lib/brief";
 import type { Shortlist } from "@/lib/rank";
 
 const INITIAL_BRIEF: Brief = {
@@ -14,6 +15,10 @@ const INITIAL_BRIEF: Brief = {
   children: 0,
   budget: 800,
   style: "winter-sun",
+  pace: null,
+  company: null,
+  comfort: null,
+  plan: null,
 };
 
 export function Desk() {
@@ -30,6 +35,11 @@ export function Desk() {
     }
     if (brief.adults < 1) {
       setError("Add at least one adult.");
+      return;
+    }
+    if (PERSONALITY_QUESTIONS.some((question) => !brief[question.id])) {
+      setError("Answer the four questions about how you like a holiday.");
+      document.getElementById("personality")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     setError(null);
@@ -76,7 +86,8 @@ export function Desk() {
           }}
         />
       </div>
-      <section id="shortlist" className="min-w-0 scroll-mt-6">
+      <section id="shortlist" className="flex min-w-0 scroll-mt-6 flex-col gap-4">
+        <PersonalityQuestionnaire brief={brief} onChange={setBrief} />
         {pending ? (
           <div className="rounded-2xl bg-card px-6 py-16 ring-1 ring-foreground/10">
             <p className="font-heading text-3xl tracking-tight">Searching for current prices.</p>
