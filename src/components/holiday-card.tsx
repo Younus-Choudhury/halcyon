@@ -28,7 +28,15 @@ export function HolidayCard({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Badge variant={result.fit === "clean" ? "default" : "outline"}>
-          {result.fit === "clean" ? "Fits this brief" : "Closest"}
+          {result.fit === "clean"
+            ? "Fits this brief"
+            : result.fit === "over"
+              ? "Over your budget"
+              : result.fit === "wrong-month"
+                ? "Different month"
+                : result.fit === "elsewhere"
+                  ? "Not from London"
+                  : "No date on this fare"}
         </Badge>
         <Badge variant="secondary">
           {result.priceSource === "listing" ? "Read on the listing" : "Price in the search result"}

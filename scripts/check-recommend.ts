@@ -69,8 +69,39 @@ const shortlist = chooseHolidays(
 assert.equal(shortlist.results[0]?.url, "https://example.com/other");
 assert.equal(shortlist.results[0]?.fit, "clean");
 assert.equal(shortlist.results[0]?.partyTotal, 600);
-const crete = shortlist.results.find((result) => result.host === "other.example");
-assert.equal(crete?.fit, "close");
+assert.equal(
+  shortlist.results.find((result) => result.host === "other.example"),
+  undefined,
+);
 assert.equal(shortlist.results.filter((result) => result.host === "example.com").length, 1);
+
+const over = chooseHolidays(
+  [
+    {
+      title: "Tenerife in February",
+      url: "https://example.com/tenerife",
+      snippet:
+        "7 nights all-inclusive from around £600-£850 per person in low season, £900-£1,300 per person in the February half-term.",
+      query: "tenerife",
+      price: { amount: 900, sentence: "£900-£1,300 per person in the February half-term" },
+    },
+    {
+      title: "May in Gran Canaria",
+      url: "https://example.com/gran",
+      snippet: "May 2027, 7 nights all inclusive from Manchester, £373 per person.",
+      query: "gran",
+      price: { amount: 373, sentence: "£373 per person" },
+    },
+  ],
+  { ...brief, budget: 800 },
+  "10 October 2026, 22:36",
+  ["tenerife", "gran"],
+);
+assert.equal(over.results[0]?.fit, "over");
+assert.match(over.results[0]?.fitNote ?? "", /over the £800/);
+assert.doesNotMatch(over.results[0]?.fitNote ?? "", /close enough|Fits/);
+assert.equal(over.results.find((result) => result.title.includes("May")), undefined);
+assert.equal(over.cleanCount, 0);
+assert.match(over.intro, /Gran Canaria|gran/i);
 
 console.log("recommend checks passed");

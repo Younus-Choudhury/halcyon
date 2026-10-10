@@ -23,7 +23,7 @@ export type FoundHoliday = {
   priceSentence: string;
   priceSource: "listing" | "search";
   searchQuery: string;
-  fit: "clean" | "close";
+  fit: "clean" | "over" | "undated" | "wrong-month" | "elsewhere";
   fitNote: string;
   partyTotal: number;
   partyNote: string;
@@ -199,69 +199,63 @@ function hostOf(url: string): string {
   }
 }
 
+const OTHER_AIRPORT =
+  /\b(?:from|departing|departure)\s+(manchester|birmingham|bristol|glasgow|edinburgh|newcastle|leeds|liverpool|cardiff|belfast)\b/i;
+
+function judgedText(hit: SearchHit, priceSentence: string): string {
+  return `${hit.title} ${hit.snippet} ${priceSentence}`;
+}
+
+function nightsMatch(text: string, nights: number): boolean {
+  const counts = nightCounts(text);
+  return counts.length === 0 || counts.some((count) => Math.abs(count - nights) <= 1);
+}
+
+export function judgeFit(
+  hit: SearchHit,
+  brief: Brief,
+  price: number,
+  priceSentence: string,
+): FoundHoliday["fit"] {
+  const text = judgedText(hit, priceSentence);
+  const months = mentionedMonths(text);
+  if (months.length > 0 && !months.includes(brief.month)) return "wrong-month";
+  if (OTHER_AIRPORT.test(text)) return "elsewhere";
+  if (!months.includes(brief.month) || !nightsMatch(text, brief.nights)) return "undated";
+  if (price > brief.budget) return "over";
+  return "clean";
+}
+
 function fitNote(
   hit: SearchHit,
   brief: Brief,
   price: number,
   priceSource: "listing" | "search",
-  fit: "clean" | "close",
+  fit: FoundHoliday["fit"],
   priceSentence: string,
 ): string {
   const when = monthYear(brief.year, brief.month);
-  const months = mentionedMonths(`${hit.title} ${hit.snippet} ${priceSentence}`);
-  const nights = nightCounts(`${hit.title} ${hit.snippet} ${priceSentence}`);
-  const sentences: string[] = [];
-
-  sentences.push(
-    fit === "clean"
-      ? `This is a ${styleLabel(brief.style)} listing the search just returned, and the fare is close enough to use.`
-      : `The search returned this priced listing. It is not a clean match for the brief.`,
+  const read =
+    priceSource === "listing"
+      ? "I opened the listing just now and read that fare on the page."
+      : "That figure is printed in the search result. Open the listing before you book.";
+  const months = mentionedMonths(judgedText(hit, priceSentence)).filter(
+    (month) => month !== brief.month,
   );
 
-  if (months.includes(brief.month)) {
-    sentences.push(`The result mentions ${monthName(brief.month)}.`);
-  } else if (months.length > 0) {
-    sentences.push(
-      `The result talks about ${months.map(monthName).join(" and ")}, not ${when}.`,
-    );
-  } else {
-    sentences.push(`It does not name ${when}, so the fare may be a from-price for other dates.`);
+  if (fit === "clean") {
+    return `${gbp(price)} a person in ${when} is inside your ${gbp(brief.budget)}, for about ${brief.nights} nights from London. ${read}`;
   }
-
-  if (nights.length === 0) {
-    sentences.push(`It does not say it is ${brief.nights} nights.`);
-  } else if (nights.some((count) => Math.abs(count - brief.nights) <= 1)) {
-    sentences.push(`The length matches the ${brief.nights} nights you asked for.`);
-  } else {
-    sentences.push(`You asked for ${brief.nights} nights. The result says ${nights.join(" or ")}.`);
+  if (fit === "over") {
+    return `${monthName(brief.month)} is ${gbp(price)} a person, which is ${gbp(price - brief.budget)} over the ${gbp(brief.budget)} you set. ${read}`;
   }
-
-  const over = price - brief.budget;
-  if (over <= 0) {
-    sentences.push(`${gbp(price)} a person is inside your ${gbp(brief.budget)}.`);
-  } else {
-    sentences.push(`It is ${gbp(over)} a person over the ${gbp(brief.budget)} you set.`);
+  if (fit === "wrong-month") {
+    return `This fare is for ${months.map(monthName).join(" and ")}, not ${when}. It is not a ${monthName(brief.month)} holiday.`;
   }
-
-  if (priceSource === "listing") {
-    sentences.push("I opened the listing just now and read that fare on the page.");
-  } else {
-    sentences.push(
-      "That fare is the one printed in the search result. The listing page did not show a per-person price I could read, so open it before you treat this as bookable.",
-    );
+  if (fit === "elsewhere") {
+    return `This fare does not leave from London. It is not the departure you asked for.`;
   }
-
-  return sentences.join(" ");
-}
-
-function isClean(hit: SearchHit, brief: Brief, price: number, priceSentence: string): boolean {
-  const text = `${hit.title} ${hit.snippet} ${priceSentence}`;
-  const months = mentionedMonths(text);
-  const nights = nightCounts(text);
-  if (price > brief.budget * 1.15) return false;
-  if (!months.includes(brief.month)) return false;
-  if (nights.length > 0 && nights.every((count) => Math.abs(count - brief.nights) > 1)) return false;
-  return true;
+  return `${gbp(price)} a person is what this search printed, and it does not name ${when}. It is not a fare for that month.`;
 }
 
 function scoreHit(hit: SearchHit, brief: Brief, price: number): number {
@@ -324,7 +318,7 @@ export function chooseHolidays(
   const results: FoundHoliday[] = picked.map((item) => {
     const priceSource = item.fromPage ? "listing" : "search";
     const priceSentence = item.fromPage?.sentence ?? item.hit.price.sentence;
-    const fit = isClean(item.hit, brief, item.price, priceSentence) ? "clean" : "close";
+    const fit = judgeFit(item.hit, brief, item.price, priceSentence);
     const partyTotal = item.price * brief.adults;
     let partyNote = `${gbp(partyTotal)} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"} at ${gbp(item.price)} each.`;
     if (brief.children > 0) {
@@ -347,18 +341,37 @@ export function chooseHolidays(
     };
   });
 
-  const cleanCount = results.filter((result) => result.fit === "clean").length;
-  const request = `a ${styleLabel(brief.style)} trip in ${monthYear(brief.year, brief.month)} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"}${brief.children ? ` and ${brief.children} ${brief.children === 1 ? "child" : "children"}` : ""}, about ${brief.nights} nights, up to ${gbp(brief.budget)} a person, from London`;
+  const fitRank: Record<FoundHoliday["fit"], number> = {
+    clean: 0,
+    over: 1,
+    undated: 2,
+    elsewhere: 3,
+    "wrong-month": 4,
+  };
+  const dated = results
+    .filter((result) => result.fit === "clean" || result.fit === "over")
+    .sort((a, b) => fitRank[a.fit] - fitRank[b.fit] || a.pricePerPerson - b.pricePerPerson);
+
+  const cleanCount = dated.filter((result) => result.fit === "clean").length;
+  const when = monthYear(brief.year, brief.month);
+  const request = `a ${styleLabel(brief.style)} trip in ${when} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"}${brief.children ? ` and ${brief.children} ${brief.children === 1 ? "child" : "children"}` : ""}, about ${brief.nights} nights, up to ${gbp(brief.budget)} a person, from London`;
+  const missed = queries
+    .filter((query) => !dated.some((result) => result.searchQuery === query))
+    .map((query) => query.split(/ \d+ nights/)[0] ?? query);
+  const missedNote =
+    missed.length > 0
+      ? ` ${missed.join(" and ")} did not print a per-person fare for ${when}.`
+      : "";
   let intro: string;
-  if (results.length === 0) {
-    intro = `I searched the web just now for ${request}. None of the results printed a per-person fare I could use. Try again, or change the month or the style.`;
+  if (dated.length === 0) {
+    intro = `I searched the web just now for ${request}. None of the results printed a per-person fare for ${when}.${missedNote}`;
   } else if (cleanCount === 0) {
-    intro = `Nothing from this search is a clean match for ${request}. These are the priced listings that came back, and each note says what is off.`;
-  } else if (cleanCount === results.length) {
-    intro = `${results.length === 1 ? "One holiday" : `${results.length} holidays`}, each from its own search just now, for ${request}.`;
+    intro = `The ${when} fares from this search are over ${gbp(brief.budget)} a person.${missedNote}`;
+  } else if (cleanCount === dated.length) {
+    intro = `${dated.length === 1 ? "One holiday" : `${dated.length} holidays`}, each from its own search just now, for ${request}.${missedNote}`;
   } else {
-    intro = `${cleanCount === 1 ? "One listing fits" : `${cleanCount} listings fit`} ${request}. The others came back from their own searches, with the gap spelled out.`;
+    intro = `${cleanCount === 1 ? "One listing fits" : `${cleanCount} listings fit`} ${request}. The other dated fare is over the budget.${missedNote}`;
   }
 
-  return { intro, cleanCount, searchedAt, queries, results };
+  return { intro, cleanCount, searchedAt, queries, results: dated };
 }
