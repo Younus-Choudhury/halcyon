@@ -1,6 +1,6 @@
 # Halcyon
 
-A holiday desk that shortlists three trips from London. Every time you ask, it runs new web searches for that brief and reads a per-person fare from the results. It does not keep prices from an earlier search.
+A holiday desk that shortlists three places from how you like to travel. It asks four questions: the pace of the days, who else should be around, what the room should be, and how fixed the plan is. The shortlist is those answers only. Each place comes with a reason written from them.
 
 ## Run locally
 
@@ -9,4 +9,4 @@ npm install
 npm run dev
 ```
 
-Open the URL Next prints. The desk asks one question at a time: when, who, budget, the kind of holiday, then how you like to travel. Those answers change the places that get searched. The search needs a network connection.
+Open the URL Next prints. One question is on screen at a time. A, B, and C choose an answer. Enter continues.

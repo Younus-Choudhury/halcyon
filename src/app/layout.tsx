@@ -15,7 +15,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Halcyon — a holiday desk",
   description:
-    "Eight short questions, then three holidays from London with fares read from live listings.",
+    "Four questions about how you like a holiday, then three places and a reason for each.",
 };
 
 export const viewport: Viewport = {

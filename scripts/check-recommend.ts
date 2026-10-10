@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
 import { plannedSearches, type Brief } from "../src/lib/brief";
+import { recommendFromPersonality } from "../src/lib/personality-places";
 
 const mixed =
   "WAS £899.00 p.p. Deposit from only £199 per person. The week is £599 per person in February.";
@@ -116,5 +117,38 @@ assert.match(quietBeach[0]?.why ?? "", /Algarve/);
 const livelyBeach = plannedSearches({ ...brief, style: "beach", company: "lively", pace: "full", comfort: "treat" });
 assert.equal(livelyBeach[0]?.place, "Ibiza");
 assert.match(livelyBeach[0]?.query ?? "", /luxury hotel/);
+
+const quietPersonality = recommendFromPersonality({
+  pace: "slow",
+  company: "quiet",
+  comfort: "simple",
+  plan: "loose",
+});
+assert.equal(quietPersonality.length, 3);
+const quietNames = quietPersonality.map((pick) => pick.place);
+for (const blocked of ["Ibiza", "Ayia Napa", "Barcelona"]) {
+  assert.equal(quietNames.includes(blocked), false, blocked);
+}
+for (const pick of quietPersonality) {
+  assert.match(pick.why, new RegExp(pick.place));
+  assert.match(pick.why, /slow days/);
+  assert.match(pick.why, /quiet company/);
+  assert.match(pick.why, /simple room/);
+  assert.match(pick.why, /loose plan/);
+  assert.equal(pick.why.includes("£"), false);
+  assert.equal(/flight/i.test(pick.why), false);
+  assert.equal(/\bbook/i.test(pick.why), false);
+}
+
+const livelyPersonality = recommendFromPersonality({
+  pace: "full",
+  company: "lively",
+  comfort: "simple",
+  plan: "loose",
+});
+const livelyNames = livelyPersonality.map((pick) => pick.place);
+assert.equal(livelyNames.includes("Madeira"), false);
+assert.equal(livelyNames.includes("Fuerteventura"), false);
+assert.notDeepEqual(livelyNames, quietNames);
 
 console.log("recommend checks passed");
