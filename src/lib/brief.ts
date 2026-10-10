@@ -165,16 +165,86 @@ function placesFor(brief: Brief): [string, string, string] {
   return STYLE_PLACES[brief.style];
 }
 
-export function personalityWords(brief: Brief): string {
-  const words: string[] = [];
-  if (brief.pace === "slow") words.push("relaxing");
-  if (brief.pace === "full") words.push("busy");
-  if (brief.company === "quiet") words.push("quiet");
-  if (brief.company === "lively") words.push("lively");
-  if (brief.comfort === "treat") words.push("luxury");
-  if (brief.comfort === "simple") words.push("good value");
-  if (brief.plan === "booked") words.push("itinerary");
-  return words.slice(0, 2).join(" ");
+const PLACE_CHARACTER: Record<string, string> = {
+  Lanzarote: "The resorts are spread out, and the evenings are quieter than Tenerife's south.",
+  Fuerteventura: "It is beaches and small towns, with less nightlife than Gran Canaria.",
+  Madeira: "It is walking, levadas, and a town, not a beach party strip.",
+  Tenerife: "The south has the hotels, the restaurants, and the busier evenings.",
+  "Gran Canaria": "The south is built for resorts, dining, and people staying out.",
+  Dubai: "The hotels, the dining, and the evenings are on a big scale.",
+  Rome: "You can fill every day, and the streets stay busy after dark.",
+  Lisbon: "The city is walkable and the evenings are gentler than Barcelona.",
+  Prague: "The centre is compact, so a few days can be full without a long commute.",
+  Seville: "It is a smaller city, easier to keep to yourself than Madrid.",
+  Bologna: "It is a food city on a human scale, not a capital that runs all night.",
+  Barcelona: "The beach, the bars, and the streets are busy into the evening.",
+  Berlin: "The days and the nights can both be full.",
+  Majorca: "You can choose a quiet bay or a busier resort on the same island.",
+  Crete: "The island is large enough for a beach week without one crowded strip.",
+  Algarve: "The coast is a string of towns and beaches rather than one party resort.",
+  Menorca: "It is the quieter Balearic, with coves instead of a club strip.",
+  Corsica: "The coast is rugged and the towns are small.",
+  Ibiza: "The island is built around beaches, music, and people.",
+  "Ayia Napa": "The resort is young, loud, and concentrated in one place.",
+  "Les Deux Alpes": "It is a high resort with a long season and a proper village.",
+  "Val Thorens": "It is high, purpose-built, and lively after skiing.",
+  Mayrhofen: "The town has bars and a busier après than a small Austrian village.",
+  Lech: "It is a small, smart village rather than a big party resort.",
+  Zermatt: "The village is car-free and the evenings are civilised.",
+  Courchevel: "It is a polished resort, more hotel than nightclub.",
+  Ischgl: "The après-ski is a reason people book it.",
+  "Disneyland Paris": "The days are planned for you, which suits children and a booked week.",
+  "Majorca family": "The island has hotels that are set up for children and a beach.",
+  "Tenerife family": "The south has pools, water parks, and short transfers.",
+  "Center Parcs": "The village is self-contained, so the days can stay on site.",
+  Marrakech: "The medina is intense, social, and built around food.",
+  Lyon: "It is a food city you can walk, without the crush of a capital.",
+  "San Sebastian": "The pintxos bars are the point, and the city is compact.",
+};
+
+export type PlannedSearch = {
+  place: string;
+  query: string;
+  why: string;
+};
+
+function placementBecause(brief: Brief): string {
+  const pace =
+    brief.pace === "slow" ? "slow days" : brief.pace === "full" ? "full days" : "a mixed pace";
+  const company =
+    brief.company === "quiet"
+      ? "somewhere quiet"
+      : brief.company === "lively"
+        ? "somewhere lively"
+        : "no strong preference about the crowd";
+  const comfort =
+    brief.comfort === "simple"
+      ? "a simple room"
+      : brief.comfort === "treat"
+        ? "a treat of a hotel"
+        : "an ordinary hotel";
+  return `you asked for a ${styleLabel(brief.style)} holiday with ${pace}, ${company}, and ${comfort}`;
+}
+
+export function whyPlace(place: string, brief: Brief): string {
+  const when = monthYear(brief.year, brief.month);
+  const character =
+    PLACE_CHARACTER[place] ??
+    `It is one of the ${styleLabel(brief.style)} places that match those answers.`;
+  const room =
+    brief.comfort === "treat" ? "a luxury hotel" : brief.comfort === "simple" ? "a budget hotel" : "a hotel";
+  return `${place} is on the list because ${placementBecause(brief)}. ${character} The prompt asks for a ${brief.nights}-night package from London in ${when}, with flights, ${room}, and a per-person price, so the fare can be tied to a listing.`;
+}
+
+export function plannedSearches(brief: Brief): PlannedSearch[] {
+  const when = monthYear(brief.year, brief.month);
+  const room =
+    brief.comfort === "treat" ? "luxury hotel" : brief.comfort === "simple" ? "budget hotel" : "hotel";
+  return placesFor(brief).map((place) => ({
+    place,
+    query: `${place} package holiday from London ${when} ${brief.nights} nights flights ${room} per person £`,
+    why: whyPlace(place, brief),
+  }));
 }
 
 export function personalityPortrait(brief: Brief): string {
@@ -206,13 +276,7 @@ export function personalityPortrait(brief: Brief): string {
 }
 
 export function searchQueries(brief: Brief): string[] {
-  const when = monthYear(brief.year, brief.month);
-  const tone = personalityWords(brief);
-  const toneText = tone ? `${tone} ` : "";
-  return placesFor(brief).map(
-    (place) =>
-      `${place} ${brief.nights} nights ${toneText}holiday from London ${when} £ per person`,
-  );
+  return plannedSearches(brief).map((search) => search.query);
 }
 
 export function isBrief(value: unknown): value is Brief {

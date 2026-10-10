@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BriefForm } from "@/components/brief-form";
 import { HolidayCard } from "@/components/holiday-card";
 import { PersonalityQuestionnaire } from "@/components/personality";
-import { PERSONALITY_QUESTIONS, searchQueries, type Brief } from "@/lib/brief";
+import { PERSONALITY_QUESTIONS, plannedSearches, type Brief } from "@/lib/brief";
 import type { Shortlist } from "@/lib/rank";
 
 const INITIAL_BRIEF: Brief = {
@@ -71,7 +71,7 @@ export function Desk() {
     }
   }
 
-  const queries = searchQueries(brief);
+  const plans = plannedSearches(brief);
 
   return (
     <div className="grid items-start gap-8 lg:grid-cols-[26rem_minmax(0,1fr)]">
@@ -92,11 +92,15 @@ export function Desk() {
           <div className="rounded-2xl bg-card px-6 py-16 ring-1 ring-foreground/10">
             <p className="font-heading text-3xl tracking-tight">Searching for current prices.</p>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Three new searches are running for this brief. Earlier fares are not reused.
+              Each place was chosen from your answers. A fresh search is running for a package price, and earlier fares are not reused.
             </p>
-            <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-              {queries.map((query) => (
-                <li key={query}>{query}</li>
+            <ul className="mt-5 space-y-4">
+              {plans.map((plan) => (
+                <li key={plan.query}>
+                  <p className="text-sm font-medium">{plan.place}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{plan.why}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Prompt: {plan.query}</p>
+                </li>
               ))}
             </ul>
           </div>

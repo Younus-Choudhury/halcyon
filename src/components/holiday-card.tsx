@@ -43,6 +43,15 @@ export function HolidayCard({
         </Badge>
       </div>
 
+      {result.why ? (
+        <div className="mt-4">
+          <h4 className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
+            Why this place
+          </h4>
+          <p className="mt-2 text-sm leading-relaxed">{result.why}</p>
+        </div>
+      ) : null}
+
       <p className="mt-4 text-sm leading-relaxed">{result.fitNote}</p>
 
       <Separator className="my-5" />
@@ -64,19 +73,32 @@ export function HolidayCard({
         </div>
       </div>
 
-      <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
-        Search: {result.searchQuery}
-      </p>
-      <p className="mt-2 text-sm">
-        <a
-          href={result.url}
-          target="_blank"
-          rel="noreferrer"
-          className="font-medium text-primary underline decoration-primary/30 underline-offset-4"
-        >
-          Open the listing
-        </a>
-        <span className="text-muted-foreground"> · searched {searchedAt}</span>
+      <div className="mt-5">
+        <h4 className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Source</h4>
+        <p className="mt-2 text-sm leading-relaxed">
+          <a
+            href={result.url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-primary underline decoration-primary/30 underline-offset-4"
+          >
+            {result.host}
+          </a>
+          <span className="text-muted-foreground"> · searched {searchedAt}</span>
+        </p>
+        <p className="mt-1 break-all text-sm leading-relaxed">
+          <a href={result.url} target="_blank" rel="noreferrer" className="text-primary">
+            {result.url}
+          </a>
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {result.priceSource === "listing"
+            ? "The price was read on that page just now."
+            : "The price is the one printed in the search result for that page. Open it before you book."}
+        </p>
+      </div>
+      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+        Prompt: {result.searchQuery}
       </p>
     </article>
   );

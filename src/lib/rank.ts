@@ -1,4 +1,12 @@
-import { gbp, monthName, monthYear, personalityPortrait, styleLabel, type Brief } from "@/lib/brief";
+import {
+  gbp,
+  monthName,
+  monthYear,
+  personalityPortrait,
+  plannedSearches,
+  styleLabel,
+  type Brief,
+} from "@/lib/brief";
 
 export type PriceMention = {
   amount: number;
@@ -23,6 +31,8 @@ export type FoundHoliday = {
   priceSentence: string;
   priceSource: "listing" | "search";
   searchQuery: string;
+  place: string;
+  why: string;
   fit: "clean" | "over" | "undated" | "wrong-month" | "elsewhere";
   fitNote: string;
   partyTotal: number;
@@ -315,9 +325,11 @@ export function chooseHolidays(
     picked.push(item);
   }
 
+  const plans = plannedSearches(brief);
   const results: FoundHoliday[] = picked.map((item) => {
     const priceSource = item.fromPage ? "listing" : "search";
     const priceSentence = item.fromPage?.sentence ?? item.hit.price.sentence;
+    const plan = plans.find((search) => search.query === item.hit.query);
     const fit = judgeFit(item.hit, brief, item.price, priceSentence);
     const partyTotal = item.price * brief.adults;
     let partyNote = `${gbp(partyTotal)} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"} at ${gbp(item.price)} each.`;
@@ -334,6 +346,8 @@ export function chooseHolidays(
       priceSentence,
       priceSource,
       searchQuery: item.hit.query,
+      place: plan?.place ?? "",
+      why: plan?.why ?? "",
       fit,
       fitNote: fitNote(item.hit, brief, item.price, priceSource, fit, priceSentence),
       partyTotal,
@@ -357,7 +371,12 @@ export function chooseHolidays(
   const request = `a ${styleLabel(brief.style)} trip in ${when} for ${brief.adults} ${brief.adults === 1 ? "adult" : "adults"}${brief.children ? ` and ${brief.children} ${brief.children === 1 ? "child" : "children"}` : ""}, about ${brief.nights} nights, up to ${gbp(brief.budget)} a person, from London. ${personalityPortrait(brief)}`;
   const missed = queries
     .filter((query) => !dated.some((result) => result.searchQuery === query))
-    .map((query) => query.split(/ \d+ nights/)[0] ?? query);
+    .map(
+      (query) =>
+        plans.find((search) => search.query === query)?.place ??
+        query.split(/ \d+ nights/)[0] ??
+        query,
+    );
   const missedNote =
     missed.length > 0
       ? ` ${missed.join(" and ")} did not print a per-person fare for ${when}.`

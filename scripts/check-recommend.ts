@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
-import { searchQueries, type Brief } from "../src/lib/brief";
+import { plannedSearches, type Brief } from "../src/lib/brief";
 
 const mixed =
   "WAS £899.00 p.p. Deposit from only £199 per person. The week is £599 per person in February.";
@@ -108,10 +108,13 @@ assert.equal(over.results.find((result) => result.title.includes("May")), undefi
 assert.equal(over.cleanCount, 0);
 assert.match(over.intro, /Gran Canaria|gran/i);
 
-const quietBeach = searchQueries({ ...brief, style: "beach", company: "quiet", pace: "slow" });
-assert.match(quietBeach[0] ?? "", /^Algarve /);
-assert.match(quietBeach.join(" "), /relaxing quiet/);
-const livelyBeach = searchQueries({ ...brief, style: "beach", company: "lively", pace: "full" });
-assert.match(livelyBeach[0] ?? "", /^Ibiza /);
+const quietBeach = plannedSearches({ ...brief, style: "beach", company: "quiet", pace: "slow", comfort: "simple" });
+assert.equal(quietBeach[0]?.place, "Algarve");
+assert.match(quietBeach[0]?.query ?? "", /Algarve package holiday from London February 2027 7 nights flights budget hotel per person/);
+assert.match(quietBeach[0]?.why ?? "", /quiet/);
+assert.match(quietBeach[0]?.why ?? "", /Algarve/);
+const livelyBeach = plannedSearches({ ...brief, style: "beach", company: "lively", pace: "full", comfort: "treat" });
+assert.equal(livelyBeach[0]?.place, "Ibiza");
+assert.match(livelyBeach[0]?.query ?? "", /luxury hotel/);
 
 console.log("recommend checks passed");
