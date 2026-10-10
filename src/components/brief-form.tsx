@@ -105,8 +105,8 @@ export function BriefForm({
               inputMode="numeric"
               className="h-10 pl-7"
               value={brief.budget ? String(brief.budget) : ""}
-              onChange={(event) => {
-                const next = event.target.value.replace(/[^\d]/g, "");
+              onValueChange={(value) => {
+                const next = value.replace(/[^\d]/g, "");
                 onChange({ ...brief, budget: next ? Number(next) : 0 });
               }}
               aria-invalid={error ? true : undefined}
