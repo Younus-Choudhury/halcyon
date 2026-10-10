@@ -126,7 +126,8 @@ const quietPersonality = recommendFromPersonality({
 });
 assert.equal(quietPersonality.length, 3);
 const quietNames = quietPersonality.map((pick) => pick.place);
-for (const blocked of ["Ibiza", "Ayia Napa", "Barcelona"]) {
+assert.deepEqual(quietNames, ["Crete", "Paphos", "Madeira"]);
+for (const blocked of ["Barcelona", "New York", "Las Vegas", "Dubai", "Berlin"]) {
   assert.equal(quietNames.includes(blocked), false, blocked);
 }
 for (const pick of quietPersonality) {
@@ -147,8 +148,10 @@ const livelyPersonality = recommendFromPersonality({
   plan: "loose",
 });
 const livelyNames = livelyPersonality.map((pick) => pick.place);
-assert.equal(livelyNames.includes("Madeira"), false);
-assert.equal(livelyNames.includes("Fuerteventura"), false);
+assert.deepEqual(livelyNames, ["Berlin", "Barcelona", "New York"]);
+for (const blocked of ["Madeira", "Crete", "Paphos", "Maldives"]) {
+  assert.equal(livelyNames.includes(blocked), false, blocked);
+}
 assert.notDeepEqual(livelyNames, quietNames);
 
 console.log("recommend checks passed");

@@ -1,6 +1,6 @@
 # Halcyon
 
-A holiday desk that shortlists three places from how you like to travel. It asks four questions: the pace of the days, who else should be around, what the room should be, and how fixed the plan is. The shortlist is those answers only. Each place comes with a reason written from them.
+A holiday desk that shortlists three British Airways Holidays places from how you like to travel. It asks four questions: the pace of the days, who else should be around, what the room should be, and how fixed the plan is. The shortlist is those answers only, and it appears at once. Each place comes with a reason written from them.
 
 ## Run locally
 

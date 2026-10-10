@@ -357,10 +357,10 @@ function screenPrompt(step: StepId, phase: Phase): string {
 
 function screenSupport(step: StepId, phase: Phase, personality: Personality | null): string | null {
   if (phase === "results" && personality) {
-    return `${personalityLine(personality)} These three places follow only those answers.`;
+    return `${personalityLine(personality)} These three British Airways Holidays places follow only those answers.`;
   }
   if (step === "cover") {
-    return "Four questions about how you like a holiday. Then three places, and a reason for each.";
+    return "Four questions about how you like a holiday. Then three British Airways Holidays places, and a reason for each.";
   }
   if (isQuestion(step)) return "This answer is part of what chooses the shortlist.";
   return null;
@@ -369,7 +369,7 @@ function screenSupport(step: StepId, phase: Phase, personality: Personality | nu
 function CoverNotes() {
   const notes = [
     ["01", "One question on screen"],
-    ["02", "The shortlist follows only your answers"],
+    ["02", "British Airways Holidays places"],
     ["03", "A place, and why it fits"],
   ];
   return (
@@ -396,7 +396,7 @@ function Shortlist({ picks }: { picks: PlacePick[] }) {
           className="rounded-[1.15rem] bg-white px-4 py-4 shadow-[0_1px_0_oklch(0.2_0.02_60_/_0.04),0_10px_28px_oklch(0.3_0.02_60_/_0.06)]"
         >
           <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-            {String(index + 1).padStart(2, "0")}
+            {String(index + 1).padStart(2, "0")} · British Airways Holidays
           </p>
           <h2 className="mt-1 font-heading text-[1.7rem] leading-tight font-medium tracking-tight text-[oklch(0.2_0.02_55)]">
             {pick.place}
