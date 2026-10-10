@@ -23,7 +23,7 @@ export function PersonalityQuestionnaire({
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
         These four answers change the places I search. A quiet beach week is not the same search as a lively one.
       </p>
-      <div className="mt-6 flex flex-col gap-6">
+      <div className="mt-5 flex flex-col gap-5">
         {PERSONALITY_QUESTIONS.map((question, index) => (
           <fieldset key={question.id}>
             <legend className="text-sm font-medium">

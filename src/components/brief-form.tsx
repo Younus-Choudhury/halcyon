@@ -41,7 +41,7 @@ export function BriefForm({
       <div>
         <h2 className="font-heading text-2xl tracking-tight">The brief</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          London departures. Answer the four questions beside this, then ask. Each shortlist searches again.
+          London departures. Answer the four questions above, then ask. Each shortlist searches again.
         </p>
       </div>
 

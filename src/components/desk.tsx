@@ -74,8 +74,9 @@ export function Desk() {
   const queries = searchQueries(brief);
 
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[20rem_minmax(0,1fr)]">
-      <div className="lg:sticky lg:top-6">
+    <div className="grid items-start gap-8 lg:grid-cols-[26rem_minmax(0,1fr)]">
+      <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+        <PersonalityQuestionnaire brief={brief} onChange={setBrief} />
         <BriefForm
           brief={brief}
           error={error}
@@ -87,7 +88,6 @@ export function Desk() {
         />
       </div>
       <section id="shortlist" className="flex min-w-0 scroll-mt-6 flex-col gap-4">
-        <PersonalityQuestionnaire brief={brief} onChange={setBrief} />
         {pending ? (
           <div className="rounded-2xl bg-card px-6 py-16 ring-1 ring-foreground/10">
             <p className="font-heading text-3xl tracking-tight">Searching for current prices.</p>
