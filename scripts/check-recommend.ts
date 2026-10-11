@@ -276,4 +276,36 @@ Why: The same sentence about nights and friends here now.
 );
 assert.equal(parseModelShortlist("Place: Berlin\nWhy: Only one place was written here today."), null);
 
+const numbered = parseModelShortlist(`
+1. Place: Madeira) - Why: The warm climate on Madeira is perfect for a long swim with your sister.
+2. Place: Seville Why: Seville keeps a loose plan and a simple room for the two of you. 3. Place: Barbaodis (
+3. Place: Barbados Why: The beach stays quiet, and queues stay off the sand.
+`);
+assert.deepEqual(numbered?.map((pick) => pick.place), ["Madeira", "Seville", "Barbados"]);
+assert.match(numbered?.[0]?.why ?? "", /^The warm climate/);
+assert.equal(numbered?.[1]?.why.includes("Barbaodis"), false);
+assert.match(numbered?.[2]?.why ?? "", /^The beach stays quiet/);
+assert.equal((numbered ?? []).some((pick) => /why:/i.test(pick.why)), false);
+
+const quoted = parseModelShortlist(`
+Place: Dubrovnik
+Why: "A long swim with your sister, away from queues, beside a small harbour."
+Place: Paphos
+Why: The harbour stays small and the morning starts late.
+Place: Corfu
+Why: Slow days by the water, with crowds left behind.
+`);
+assert.match(quoted?.[0]?.why ?? "", /^A long swim/);
+assert.equal(quoted?.[0]?.why.includes('"'), false);
+
+const starred = parseModelShortlist(`
+Place: 1. **Dubrovnik** - A picturesque coastal town with a long history, offering a serene environment perfect for relaxing on slow days. The nearby beaches provide ample opportunities to enjoy a leisurely swim without the rush of tourists.
+2. **Madeira** - Known as the "Isle of Eternal Spring," Madeira offers a tranquil climate year-round, making it ideal for your sister and you to spend time together.
+3. **Barcelona** - With its vibrant city life, Barcelona provides plenty of activities for both of you while still allowing for a relaxed pace.
+`);
+assert.deepEqual(starred?.map((pick) => pick.place), ["Dubrovnik", "Madeira", "Barcelona"]);
+assert.match(starred?.[1]?.why ?? "", /sister/);
+assert.equal(starred?.[1]?.why.includes('"'), false);
+assert.doesNotMatch(starred?.[1]?.why ?? "", /Eternal Spring,\.$/);
+
 console.log("recommend checks passed");
