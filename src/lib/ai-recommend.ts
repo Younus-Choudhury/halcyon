@@ -20,8 +20,11 @@ const FOODS: Food[] = ["central", "incidental", "either"];
 const MORNINGS: Morning[] = ["late", "early", "either"];
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-const OPENROUTER_KEY = "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";
+const MODELS = [
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+];
 
 type ChatTurn = { role: "system" | "user"; content: string };
 
@@ -250,8 +253,9 @@ function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
   ];
 }
 
-async function writeOnce(answers: HolidayAnswers, extra: string): Promise<string> {
-  const key = process.env.OPENROUTER_API_KEY?.trim() || OPENROUTER_KEY;
+async function writeOnce(answers: HolidayAnswers, extra: string, model: string): Promise<string> {
+  const key = process.env.OPENROUTER_API_KEY?.trim();
+  if (!key) throw new Error("The shortlist was not written.");
   const response = await fetch(OPENROUTER_URL, {
     method: "POST",
     headers: {
@@ -260,32 +264,40 @@ async function writeOnce(answers: HolidayAnswers, extra: string): Promise<string
       "X-Title": "Halcyon",
     },
     body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL,
+      model,
       temperature: 0.4,
-      max_tokens: 700,
+      max_tokens: 900,
       reasoning: { enabled: false },
       messages: messagesFor(answers, extra),
     }),
   });
   if (!response.ok) {
-    console.error("OpenRouter request failed", response.status);
+    console.error("OpenRouter request failed", model, response.status);
     throw new Error("The shortlist was not written.");
   }
-  const body = (await response.json()) as { choices?: Array<{ message?: { content?: unknown } }> };
-  const content = body.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("The shortlist was not written.");
-  return content;
+  const body = (await response.json()) as {
+    choices?: Array<{ message?: { content?: unknown; reasoning?: unknown } }>;
+  };
+  const message = body.choices?.[0]?.message;
+  const content = typeof message?.content === "string" ? message.content.trim() : "";
+  const reasoning = typeof message?.reasoning === "string" ? message.reasoning.trim() : "";
+  const text = content || reasoning;
+  if (!text) throw new Error("The shortlist was not written.");
+  return text;
 }
 
 export async function generateShortlist(answers: HolidayAnswers): Promise<PlacePick[]> {
   const words = contentWords(answers);
-  const reminder = `Use at least two of these words from the traveller: ${words.join(", ")}. Reply again with JSON for exactly three places.`;
-  const firstText = await writeOnce(answers, "");
-  const first = parseModelReply(firstText);
-  if (first && usesWords(first, words)) return first;
-  const second = parseModelReply(await writeOnce(answers, reminder));
-  if (second && usesWords(second, words)) return second;
-  if (second) return second;
-  if (first) return first;
+  let fallback: PlacePick[] | null = null;
+  for (const model of MODELS) {
+    try {
+      const picks = parseModelReply(await writeOnce(answers, "", model));
+      if (picks && usesWords(picks, words)) return picks;
+      if (picks) fallback = picks;
+    } catch (error) {
+      console.error("Shortlist model failed", model, error instanceof Error ? error.message : error);
+    }
+  }
+  if (fallback) return fallback;
   throw new Error("The shortlist was not written.");
 }
