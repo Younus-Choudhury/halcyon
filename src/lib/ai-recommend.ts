@@ -255,7 +255,7 @@ function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
 
 async function writeOnce(answers: HolidayAnswers, extra: string, model: string): Promise<string> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
-  if (!key) throw new Error("The shortlist was not written.");
+  if (!key) throw new Error("This server has no OpenRouter key.");
   const response = await fetch(OPENROUTER_URL, {
     method: "POST",
     headers: {
@@ -273,6 +273,7 @@ async function writeOnce(answers: HolidayAnswers, extra: string, model: string):
   });
   if (!response.ok) {
     console.error("OpenRouter request failed", model, response.status);
+    if (response.status === 401) throw new Error("OpenRouter rejected the key.");
     throw new Error("The shortlist was not written.");
   }
   const body = (await response.json()) as {
@@ -289,15 +290,17 @@ async function writeOnce(answers: HolidayAnswers, extra: string, model: string):
 export async function generateShortlist(answers: HolidayAnswers): Promise<PlacePick[]> {
   const words = contentWords(answers);
   let fallback: PlacePick[] | null = null;
+  let failure = "The shortlist was not written.";
   for (const model of MODELS) {
     try {
       const picks = parseModelReply(await writeOnce(answers, "", model));
       if (picks && usesWords(picks, words)) return picks;
       if (picks) fallback = picks;
     } catch (error) {
-      console.error("Shortlist model failed", model, error instanceof Error ? error.message : error);
+      failure = error instanceof Error ? error.message : failure;
+      console.error("Shortlist model failed", model, failure);
     }
   }
   if (fallback) return fallback;
-  throw new Error("The shortlist was not written.");
+  throw new Error(failure);
 }
