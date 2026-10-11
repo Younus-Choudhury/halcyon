@@ -1,26 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PERSONALITY_QUESTIONS } from "@/lib/brief";
 import {
+  FLOW,
   personalityLine,
   recommendFromPersonality,
-  type Personality,
+  type FlowQuestion,
+  type HolidayAnswers,
   type PlacePick,
 } from "@/lib/personality-places";
 
-const QUESTION_STEPS = ["pace", "company", "comfort", "plan"] as const;
-const STEPS = ["cover", ...QUESTION_STEPS] as const;
+const STEPS = ["cover", ...FLOW.map((question) => question.id)] as const;
 
-type QuestionStep = (typeof QUESTION_STEPS)[number];
 type StepId = (typeof STEPS)[number];
 type Phase = "flow" | "results";
-
 type Answers = {
-  pace: Personality["pace"] | null;
-  company: Personality["company"] | null;
-  comfort: Personality["comfort"] | null;
-  plan: Personality["plan"] | null;
+  [Key in keyof HolidayAnswers]: HolidayAnswers[Key] | null;
 };
 
 const INITIAL_ANSWERS: Answers = {
@@ -28,6 +23,14 @@ const INITIAL_ANSWERS: Answers = {
   company: null,
   comfort: null,
   plan: null,
+  setting: null,
+  distance: null,
+  food: null,
+  morning: null,
+  travellingFor: "",
+  remember: "",
+  avoid: "",
+  loved: "",
 };
 
 type Choice = {
@@ -38,33 +41,70 @@ type Choice = {
   next: Answers;
 };
 
-function isQuestion(step: StepId): step is QuestionStep {
-  return (QUESTION_STEPS as readonly string[]).includes(step);
+function questionAt(step: StepId): FlowQuestion | null {
+  return FLOW.find((item) => item.id === step) ?? null;
+}
+
+function isChoice(step: StepId): boolean {
+  return questionAt(step)?.kind === "choice";
+}
+
+function isOpen(step: StepId): boolean {
+  return questionAt(step)?.kind === "open";
 }
 
 function progressFor(step: StepId, phase: Phase): number {
   if (phase === "results") return 1;
   if (step === "cover") return 0;
-  const index = QUESTION_STEPS.indexOf(step as QuestionStep);
-  return (index + 1) / QUESTION_STEPS.length;
+  const index = FLOW.findIndex((item) => item.id === step);
+  return (index + 1) / FLOW.length;
+}
+
+function openEnough(value: string | null): boolean {
+  return (value ?? "").trim().length >= 8;
 }
 
 function ready(step: StepId, answers: Answers): boolean {
-  if (isQuestion(step)) return answers[step] !== null;
-  return true;
+  const question = questionAt(step);
+  if (!question) return true;
+  if (question.kind === "open") return openEnough(answers[question.id]);
+  return answers[question.id] !== null;
 }
 
 function letter(index: number): string {
   return String.fromCharCode(65 + index);
 }
 
-function asPersonality(answers: Answers): Personality | null {
-  if (!answers.pace || !answers.company || !answers.comfort || !answers.plan) return null;
+function asHoliday(answers: Answers): HolidayAnswers | null {
+  if (
+    !answers.pace ||
+    !answers.company ||
+    !answers.comfort ||
+    !answers.plan ||
+    !answers.setting ||
+    !answers.distance ||
+    !answers.food ||
+    !answers.morning ||
+    !openEnough(answers.travellingFor) ||
+    !openEnough(answers.remember) ||
+    !openEnough(answers.avoid) ||
+    !openEnough(answers.loved)
+  ) {
+    return null;
+  }
   return {
     pace: answers.pace,
     company: answers.company,
     comfort: answers.comfort,
     plan: answers.plan,
+    setting: answers.setting,
+    distance: answers.distance,
+    food: answers.food,
+    morning: answers.morning,
+    travellingFor: (answers.travellingFor ?? "").trim(),
+    remember: (answers.remember ?? "").trim(),
+    avoid: (answers.avoid ?? "").trim(),
+    loved: (answers.loved ?? "").trim(),
   };
 }
 
@@ -76,6 +116,7 @@ export function Desk() {
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
   const advanceTimer = useRef<number | null>(null);
   const stepRef = useRef(step);
   const answersRef = useRef(answers);
@@ -91,7 +132,7 @@ export function Desk() {
   function finish(from: StepId) {
     const index = STEPS.indexOf(from);
     if (index >= STEPS.length - 1) {
-      if (!asPersonality(answersRef.current)) return;
+      if (!asHoliday(answersRef.current)) return;
       setDirection("forward");
       setPhase("results");
       return;
@@ -111,7 +152,8 @@ export function Desk() {
 
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: 0 });
-    headingRef.current?.focus({ preventScroll: true });
+    if (isOpen(step)) fieldRef.current?.focus({ preventScroll: true });
+    else headingRef.current?.focus({ preventScroll: true });
   }, [step, phase]);
 
   useEffect(() => {
@@ -121,15 +163,14 @@ export function Desk() {
   }, []);
 
   function choicesFor(current: Answers, currentStep: StepId): Choice[] | null {
-    if (!isQuestion(currentStep)) return null;
-    const question = PERSONALITY_QUESTIONS.find((item) => item.id === currentStep);
-    if (!question) return null;
+    const question = questionAt(currentStep);
+    if (!question || question.kind !== "choice") return null;
     return question.options.map((option) => ({
       id: option.id,
       label: option.label,
       hint: option.hint,
-      selected: current[currentStep] === option.id,
-      next: { ...current, [currentStep]: option.id },
+      selected: current[question.id] === option.id,
+      next: { ...current, [question.id]: option.id },
     }));
   }
 
@@ -153,7 +194,7 @@ export function Desk() {
     if (phaseRef.current === "results") {
       setPhase("flow");
       setDirection("back");
-      setStep("plan");
+      setStep("loved");
       return;
     }
     const index = STEPS.indexOf(stepRef.current);
@@ -206,15 +247,16 @@ export function Desk() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const personality = asPersonality(answers);
-  const picks = phase === "results" && personality ? recommendFromPersonality(personality) : null;
+  const holiday = asHoliday(answers);
+  const picks = phase === "results" && holiday ? recommendFromPersonality(holiday) : null;
   const choices = phase === "flow" ? choicesFor(answers, step) : null;
+  const openQuestion = phase === "flow" && isOpen(step) ? questionAt(step) : null;
   const showProgress = !(phase === "flow" && step === "cover");
   const progress = progressFor(step, phase);
-  const questionIndex = phase === "flow" && isQuestion(step) ? QUESTION_STEPS.indexOf(step) + 1 : null;
+  const questionIndex = phase === "flow" && step !== "cover" ? FLOW.findIndex((item) => item.id === step) + 1 : null;
   const canGoBack = phase === "results" || step !== "cover";
   const prompt = screenPrompt(step, phase);
-  const support = screenSupport(step, phase, personality);
+  const support = screenSupport(step, phase, holiday);
   const continueLabel = phase === "results" ? "Start again" : step === "cover" ? "Start" : "Continue";
   const footerDisabled = phase === "flow" && step !== "cover" && !ready(step, answers);
 
@@ -238,7 +280,7 @@ export function Desk() {
             <span className="mt-2 h-px w-7 bg-[#e10600]" aria-hidden />
           </div>
           <p className="justify-self-end pb-1 text-[11px] tracking-[0.18em] tabular-nums">
-            {questionIndex ? `${String(questionIndex).padStart(2, "0")} / 04` : phase === "results" ? "04 / 04" : ""}
+            {questionIndex ? `${String(questionIndex).padStart(2, "0")} / 12` : phase === "results" ? "12 / 12" : ""}
           </p>
         </div>
         <div
@@ -270,9 +312,7 @@ export function Desk() {
           >
             {prompt}
           </h1>
-          {support ? (
-            <p className="mt-5 max-w-[34ch] text-[13px] leading-relaxed text-[#111]/60">{support}</p>
-          ) : null}
+          {support ? <p className="mt-5 max-w-[36ch] text-[13px] leading-relaxed text-[#111]/60">{support}</p> : null}
 
           {phase === "flow" && step === "cover" ? <CoverNotes /> : null}
 
@@ -301,6 +341,24 @@ export function Desk() {
             </div>
           ) : null}
 
+          {openQuestion && openQuestion.kind === "open" ? (
+            <label className="mt-10 block">
+              <span className="text-[10px] tracking-[0.28em] text-[#e10600] uppercase">In your words</span>
+              <textarea
+                ref={fieldRef}
+                rows={4}
+                value={answers[openQuestion.id] ?? ""}
+                placeholder={openQuestion.placeholder}
+                onChange={(event) => {
+                  const next = { ...answers, [openQuestion.id]: event.target.value };
+                  answersRef.current = next;
+                  setAnswers(next);
+                }}
+                className="mt-4 w-full resize-none border-b border-[#111] bg-transparent pb-3 font-heading text-[1.55rem] leading-snug font-normal text-[#111] italic outline-none placeholder:text-[#111]/25"
+              />
+            </label>
+          ) : null}
+
           {picks ? <Shortlist picks={picks} /> : null}
         </div>
       </div>
@@ -320,8 +378,14 @@ export function Desk() {
         >
           {continueLabel}
         </button>
-        <p className={`mt-3 text-center text-[10px] tracking-[0.18em] text-[#111]/45 uppercase ${phase === "results" ? "" : "hidden sm:block"}`}>
-          {phase === "results" ? "Back changes the last answer" : choices ? "A to choose  ·  Enter to continue" : "Enter to continue"}
+        <p className={`mt-3 text-center text-[10px] tracking-[0.18em] text-[#111]/45 uppercase ${phase === "results" || isOpen(step) ? "" : "hidden sm:block"}`}>
+          {phase === "results"
+            ? "Back changes the last answer"
+            : isOpen(step)
+              ? "A sentence, then continue"
+              : isChoice(step)
+                ? "A to choose  ·  Enter to continue"
+                : "Enter to continue"}
         </p>
       </div>
     </div>
@@ -331,25 +395,26 @@ export function Desk() {
 function screenPrompt(step: StepId, phase: Phase): string {
   if (phase === "results") return "Your shortlist.";
   if (step === "cover") return "Where should you go?";
-  const question = PERSONALITY_QUESTIONS.find((item) => item.id === step);
-  return question?.prompt ?? "";
+  return questionAt(step)?.prompt ?? "";
 }
 
-function screenSupport(step: StepId, phase: Phase, personality: Personality | null): string | null {
-  if (phase === "results" && personality) {
-    return `${personalityLine(personality)} These three British Airways Holidays places follow only those answers.`;
+function screenSupport(step: StepId, phase: Phase, holiday: HolidayAnswers | null): string | null {
+  if (phase === "results" && holiday) {
+    return `${personalityLine(holiday)} These three British Airways Holidays places follow your twelve answers.`;
   }
   if (step === "cover") {
-    return "Four questions about how you like a holiday. Then three British Airways Holidays places, and a reason for each.";
+    return "Eight choices, then four things you write. Three British Airways Holidays places, and a reason that uses your words.";
   }
-  if (isQuestion(step)) return "This answer is part of what chooses the shortlist.";
+  const question = questionAt(step);
+  if (question?.kind === "open") return question.support;
+  if (question?.kind === "choice") return "This answer is part of what chooses the shortlist.";
   return null;
 }
 
 function CoverNotes() {
   const notes = [
-    ["01", "One question on screen"],
-    ["02", "British Airways Holidays places"],
+    ["01", "Eight choices"],
+    ["02", "Four answers in your words"],
     ["03", "A place, and why it fits"],
   ];
   return (

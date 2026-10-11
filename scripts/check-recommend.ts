@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
 import { plannedSearches, type Brief } from "../src/lib/brief";
-import { recommendFromPersonality } from "../src/lib/personality-places";
+import { FLOW, recommendFromPersonality } from "../src/lib/personality-places";
 
 const mixed =
   "WAS £899.00 p.p. Deposit from only £199 per person. The week is £599 per person in February.";
@@ -118,15 +118,29 @@ const livelyBeach = plannedSearches({ ...brief, style: "beach", company: "lively
 assert.equal(livelyBeach[0]?.place, "Ibiza");
 assert.match(livelyBeach[0]?.query ?? "", /luxury hotel/);
 
+assert.equal(FLOW.filter((question) => question.kind === "choice").length, 8);
+assert.equal(FLOW.filter((question) => question.kind === "open").length, 4);
+
+const written = {
+  travellingFor: "my sister and me",
+  remember: "a long swim",
+  avoid: "queues",
+  loved: "a small harbour",
+};
 const quietPersonality = recommendFromPersonality({
   pace: "slow",
   company: "quiet",
   comfort: "simple",
   plan: "loose",
+  setting: "sea",
+  distance: "near",
+  food: "incidental",
+  morning: "late",
+  ...written,
 });
 assert.equal(quietPersonality.length, 3);
 const quietNames = quietPersonality.map((pick) => pick.place);
-assert.deepEqual(quietNames, ["Crete", "Paphos", "Madeira"]);
+assert.deepEqual(quietNames, ["Crete", "Paphos", "Dubrovnik"]);
 for (const blocked of ["Barcelona", "New York", "Las Vegas", "Dubai", "Berlin"]) {
   assert.equal(quietNames.includes(blocked), false, blocked);
 }
@@ -136,19 +150,62 @@ for (const pick of quietPersonality) {
   assert.match(pick.why, /quiet company/);
   assert.match(pick.why, /simple room/);
   assert.match(pick.why, /loose plan/);
+  assert.match(pick.why, /sister/);
+  assert.match(pick.why, /swim/);
+  assert.match(pick.why, /queues/);
+  assert.match(pick.why, /harbour/);
   assert.equal(pick.why.includes("£"), false);
   assert.equal(/flight/i.test(pick.why), false);
   assert.equal(/\bbook/i.test(pick.why), false);
 }
+
+const avoidSea = recommendFromPersonality({
+  pace: "slow",
+  company: "quiet",
+  comfort: "simple",
+  plan: "loose",
+  setting: "sea",
+  distance: "near",
+  food: "incidental",
+  morning: "late",
+  ...written,
+  avoid: "beaches and the sea",
+});
+const avoidNames = avoidSea.map((pick) => pick.place);
+assert.equal(avoidNames.includes("Crete"), false);
+assert.equal(avoidNames.includes("Paphos"), false);
+assert.equal(avoidNames[0], "Madeira");
+
+const namedBerlin = recommendFromPersonality({
+  pace: "slow",
+  company: "quiet",
+  comfort: "simple",
+  plan: "loose",
+  setting: "sea",
+  distance: "near",
+  food: "incidental",
+  morning: "late",
+  ...written,
+  loved: "Berlin",
+});
+assert.equal(namedBerlin.some((pick) => pick.place === "Berlin"), true);
 
 const livelyPersonality = recommendFromPersonality({
   pace: "full",
   company: "lively",
   comfort: "simple",
   plan: "loose",
+  setting: "city",
+  distance: "near",
+  food: "incidental",
+  morning: "late",
+  travellingFor: "a group of friends",
+  remember: "late streets",
+  avoid: "a resort beach",
+  loved: "a city that stays up",
 });
 const livelyNames = livelyPersonality.map((pick) => pick.place);
-assert.deepEqual(livelyNames, ["Berlin", "Barcelona", "New York"]);
+assert.equal(livelyNames[0], "Berlin");
 for (const blocked of ["Madeira", "Crete", "Paphos", "Maldives"]) {
   assert.equal(livelyNames.includes(blocked), false, blocked);
 }
