@@ -20,7 +20,7 @@ const FOODS: Food[] = ["central", "incidental", "either"];
 const MORNINGS: Morning[] = ["late", "early", "either"];
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-4.1-mini";
+const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
 
 type ChatTurn = { role: "system" | "user"; content: string };
 
@@ -98,8 +98,8 @@ function cleanWhy(raw: string): string {
     .slice(0, 2)
     .filter((sentence) => !/^(?:place|name)\s*:?$/i.test(sentence))
     .filter((sentence) => !/[£€$]/.test(sentence))
-    .filter((sentence) => !/\b(flight|flights|airfare|booking)\b/i.test(sentence))
-    .filter((sentence) => !/\bbook(?:ing|ed| a)?\b/i.test(sentence));
+    .filter((sentence) => !/\b(flight|flights|airfare|booking|booked)\b/i.test(sentence))
+    .filter((sentence) => !/\bbook a\b/i.test(sentence));
   let why = sentences.join(" ").replace(/["“”]/g, "").trim();
   if (why.length > 420) why = why.slice(0, 420).replace(/\s+\S*$/, "").trim();
   if (why && !/[.!?]$/.test(why)) why += ".";
@@ -186,7 +186,7 @@ function acceptPicks(picks: PlacePick[]): PlacePick[] | null {
     return null;
   }
   if (new Set(three.map((pick) => pick.why)).size < 2) return null;
-  if (three.some((pick) => /[£€$]/.test(pick.why) || /\bflight/i.test(pick.why) || /\bbook/i.test(pick.why))) {
+  if (three.some((pick) => /[£€$]/.test(pick.why) || /\bflight/i.test(pick.why) || /\b(booking|booked|book a)\b/i.test(pick.why))) {
     return null;
   }
   return three;
@@ -228,6 +228,7 @@ function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
     "Choose exactly three holiday places from the allowed list.",
     'Reply with JSON only: {"places":[{"place":"Name","why":"two sentences"}]}',
     "Copy each name from the allowed list. Each why must be different and must use the traveller's own words.",
+    "Write the reasons as you, not as I.",
     "Do not mention prices, fares, flights, or booking.",
   ].join(" ");
   const user = [
@@ -264,7 +265,8 @@ async function writeOnce(answers: HolidayAnswers, extra: string): Promise<string
     body: JSON.stringify({
       model: process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL,
       temperature: 0.4,
-      response_format: { type: "json_object" },
+      max_tokens: 700,
+      reasoning: { enabled: false },
       messages: messagesFor(answers, extra),
     }),
   });
