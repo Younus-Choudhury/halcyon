@@ -2,7 +2,7 @@
 
 A holiday desk that asks twelve questions, then asks a language model to write three British Airways Holidays places and a reason for each. Eight questions are choices. Four are in your own words. There are no prices and no live fare search.
 
-The server sends the answers to [OpenRouter](https://openrouter.ai) and returns the three places. The default model is `nvidia/nemotron-3-super-120b-a12b:free`, which runs on the free allowance for the key. Set `OPENROUTER_MODEL` to use another one. Production reads the key from `.env`, which is deployed with the app. The app does not download a model file.
+The server sends the answers to [OpenRouter](https://openrouter.ai) and returns the three places. The default model is `nvidia/nemotron-3-super-120b-a12b:free`, which runs on the free allowance for the key. Set `OPENROUTER_MODEL` to use another one. The server program carries the OpenRouter key, so a deploy has it without a separate setup step. The app does not download a model file.
 
 ## Run locally
 

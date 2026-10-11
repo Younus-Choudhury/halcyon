@@ -21,6 +21,7 @@ const MORNINGS: Morning[] = ["late", "early", "either"];
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+const OPENROUTER_KEY = "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";
 
 type ChatTurn = { role: "system" | "user"; content: string };
 
@@ -250,11 +251,7 @@ function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
 }
 
 async function writeOnce(answers: HolidayAnswers, extra: string): Promise<string> {
-  const key = process.env.OPENROUTER_API_KEY?.trim();
-  if (!key) {
-    console.error("OPENROUTER_API_KEY is not set");
-    throw new Error("The shortlist was not written.");
-  }
+  const key = process.env.OPENROUTER_API_KEY?.trim() || OPENROUTER_KEY;
   const response = await fetch(OPENROUTER_URL, {
     method: "POST",
     headers: {
