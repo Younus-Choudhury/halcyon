@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
 import { plannedSearches, type Brief } from "../src/lib/brief";
-import { parseModelShortlist } from "../src/lib/ai-recommend";
+import { parseModelReply, parseModelShortlist } from "../src/lib/ai-recommend";
 import { FLOW, recommendFromPersonality } from "../src/lib/personality-places";
 
 const mixed =
@@ -307,5 +307,15 @@ assert.deepEqual(starred?.map((pick) => pick.place), ["Dubrovnik", "Madeira", "B
 assert.match(starred?.[1]?.why ?? "", /sister/);
 assert.equal(starred?.[1]?.why.includes('"'), false);
 assert.doesNotMatch(starred?.[1]?.why ?? "", /Eternal Spring,\.$/);
+
+const jsonReply = parseModelReply(`{
+  "places": [
+    {"place": "paphos", "why": "A long swim with your sister, beside a small harbour and away from queues."},
+    {"place": "Madeira", "why": "Quiet paths for the two of you, with crowds left off the walk."},
+    {"place": "Lisbon", "why": "A morning city and a small harbour, kept to a loose plan."}
+  ]
+}`);
+assert.deepEqual(jsonReply?.map((pick) => pick.place), ["Paphos", "Madeira", "Lisbon"]);
+assert.match(jsonReply?.[0]?.why ?? "", /sister/);
 
 console.log("recommend checks passed");

@@ -19,21 +19,10 @@ const DISTANCES: Distance[] = ["near", "far", "either"];
 const FOODS: Food[] = ["central", "incidental", "either"];
 const MORNINGS: Morning[] = ["late", "early", "either"];
 
-const MODEL = "onnx-community/Qwen2.5-1.5B-Instruct";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 
 type ChatTurn = { role: "system" | "user"; content: string };
-type Generated = string | Array<{ role?: string; content?: string }>;
-type TextGenerator = (
-  messages: ChatTurn[],
-  options: {
-    max_new_tokens: number;
-    temperature: number;
-    do_sample: boolean;
-    repetition_penalty: number;
-  },
-) => Promise<Array<{ generated_text: Generated }>>;
-
-let generatorPromise: Promise<TextGenerator> | null = null;
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {
   return typeof value === "string" && allowed.includes(value as T);
@@ -179,8 +168,14 @@ export function parseModelShortlist(text: string, allowed: readonly string[] = P
     const end = index + 1 < hits.length ? hits[index + 1].index : source.length;
     return { place: hit.name, why: cleanWhy(source.slice(hit.index + hit.length, end)) };
   });
+  return acceptPicks(picks);
+}
+
+function acceptPicks(picks: PlacePick[]): PlacePick[] | null {
+  if (picks.length < 3) return null;
+  const three = picks.slice(0, 3);
   if (
-    picks.some(
+    three.some(
       (pick) =>
         pick.why.length < 32 ||
         /^why\b/i.test(pick.why) ||
@@ -190,44 +185,51 @@ export function parseModelShortlist(text: string, allowed: readonly string[] = P
   ) {
     return null;
   }
-  if (new Set(picks.map((pick) => pick.why)).size < 2) return null;
-  if (picks.some((pick) => /[£€$]/.test(pick.why) || /\bflight/i.test(pick.why) || /\bbook/i.test(pick.why))) {
+  if (new Set(three.map((pick) => pick.why)).size < 2) return null;
+  if (three.some((pick) => /[£€$]/.test(pick.why) || /\bflight/i.test(pick.why) || /\bbook/i.test(pick.why))) {
     return null;
   }
-  return picks;
+  return three;
 }
 
-function readGenerated(value: Generated | undefined): string {
-  if (typeof value === "string") return value;
-  if (!Array.isArray(value)) return "";
-  const last = value.at(-1);
-  return typeof last?.content === "string" ? last.content : "";
+function canonicalPlace(name: string, allowed: readonly string[]): string | null {
+  const trimmed = name.trim();
+  return allowed.find((place) => place.toLowerCase() === trimmed.toLowerCase()) ?? null;
 }
 
-async function getGenerator(): Promise<TextGenerator> {
-  if (!generatorPromise) {
-    generatorPromise = import("@huggingface/transformers").then(async ({ pipeline }) => {
-      const generator = await pipeline("text-generation", MODEL, { dtype: "q4" });
-      return generator as unknown as TextGenerator;
-    });
-  }
+export function parseModelReply(text: string, allowed: readonly string[] = PLACE_NAMES): PlacePick[] | null {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return parseModelShortlist(text, allowed);
   try {
-    return await generatorPromise;
-  } catch (error) {
-    generatorPromise = null;
-    throw error;
+    const data = JSON.parse(text.slice(start, end + 1)) as { places?: unknown };
+    if (!Array.isArray(data.places)) return parseModelShortlist(text, allowed);
+    const seen = new Set<string>();
+    const picks: PlacePick[] = [];
+    for (const item of data.places) {
+      if (!item || typeof item !== "object") continue;
+      const record = item as { place?: unknown; why?: unknown };
+      if (typeof record.place !== "string" || typeof record.why !== "string") continue;
+      const place = canonicalPlace(record.place, allowed);
+      if (!place || seen.has(place)) continue;
+      seen.add(place);
+      picks.push({ place, why: cleanWhy(record.why) });
+      if (picks.length === 3) break;
+    }
+    return acceptPicks(picks) ?? parseModelShortlist(text, allowed);
+  } catch {
+    return parseModelShortlist(text, allowed);
   }
 }
 
 function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
   const words = contentWords(answers);
   const system = [
-    "Write exactly three holiday places from the allowed list. Use this shape and nothing else:",
-    "Place: Name",
-    "Why: two sentences.",
-    "Each why must be different and must use the traveller's words.",
-    "Do not stop after one place. Do not mention prices, fares, flights, or booking.",
-  ].join("\n");
+    "Choose exactly three holiday places from the allowed list.",
+    'Reply with JSON only: {"places":[{"place":"Name","why":"two sentences"}]}',
+    "Copy each name from the allowed list. Each why must be different and must use the traveller's own words.",
+    "Do not mention prices, fares, flights, or booking.",
+  ].join(" ");
   const user = [
     `Allowed places: ${PLACE_NAMES.join(", ")}.`,
     personalityLine(answers),
@@ -237,7 +239,6 @@ function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
     `Already loved: ${answers.loved.trim()}`,
     words.length ? `Use these words in the reasons: ${words.join(", ")}.` : "",
     extra,
-    "Write three places now.",
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -248,23 +249,42 @@ function messagesFor(answers: HolidayAnswers, extra: string): ChatTurn[] {
 }
 
 async function writeOnce(answers: HolidayAnswers, extra: string): Promise<string> {
-  const generator = await getGenerator();
-  const output = await generator(messagesFor(answers, extra), {
-    max_new_tokens: 320,
-    temperature: 0.35,
-    do_sample: true,
-    repetition_penalty: 1.12,
+  const key = process.env.OPENROUTER_API_KEY?.trim();
+  if (!key) {
+    console.error("OPENROUTER_API_KEY is not set");
+    throw new Error("The shortlist was not written.");
+  }
+  const response = await fetch(OPENROUTER_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "X-Title": "Halcyon",
+    },
+    body: JSON.stringify({
+      model: process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL,
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+      messages: messagesFor(answers, extra),
+    }),
   });
-  const text = readGenerated(output[0]?.generated_text);
-  return text.trimStart().startsWith("Place:") ? text : `Place: ${text}`;
+  if (!response.ok) {
+    console.error("OpenRouter request failed", response.status);
+    throw new Error("The shortlist was not written.");
+  }
+  const body = (await response.json()) as { choices?: Array<{ message?: { content?: unknown } }> };
+  const content = body.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content.trim()) throw new Error("The shortlist was not written.");
+  return content;
 }
 
 export async function generateShortlist(answers: HolidayAnswers): Promise<PlacePick[]> {
   const words = contentWords(answers);
-  const reminder = `Use at least two of these words from the traveller, without quotation marks: ${words.join(", ")}. Reply again with exactly three Place and Why blocks.`;
-  const first = parseModelShortlist(await writeOnce(answers, ""));
+  const reminder = `Use at least two of these words from the traveller: ${words.join(", ")}. Reply again with JSON for exactly three places.`;
+  const firstText = await writeOnce(answers, "");
+  const first = parseModelReply(firstText);
   if (first && usesWords(first, words)) return first;
-  const second = parseModelShortlist(await writeOnce(answers, reminder));
+  const second = parseModelReply(await writeOnce(answers, reminder));
   if (second && usesWords(second, words)) return second;
   if (second) return second;
   if (first) return first;

@@ -456,7 +456,7 @@ function screenSupport(step: StepId, phase: Phase, holiday: HolidayAnswers | nul
   if (phase === "writing") return "A model is reading your twelve answers.";
   if (phase === "failed") return failure;
   if (phase === "results" && holiday) {
-    return `${personalityLine(holiday)} A language model on this server wrote these three places from your answers.`;
+    return `${personalityLine(holiday)} A language model wrote these three places from your answers.`;
   }
   if (step === "cover") {
     return "Eight choices, then four things you write. A language model writes three British Airways Holidays places from those answers.";
