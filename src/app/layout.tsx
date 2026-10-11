@@ -1,15 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Outfit } from "next/font/google";
+import { Archivo, Bodoni_Moda } from "next/font/google";
 import "./globals.css";
 
-const outfit = Outfit({
+const archivo = Archivo({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-archivo",
 });
 
-const fraunces = Fraunces({
+const bodoni = Bodoni_Moda({
   subsets: ["latin"],
-  variable: "--font-fraunces",
+  style: ["normal", "italic"],
+  variable: "--font-bodoni",
 });
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f6f3ec",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -27,11 +28,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}
-    >
-      <body className="min-h-dvh bg-[#e6dfd2] text-foreground">{children}</body>
+    <html lang="en" className={`${archivo.variable} ${bodoni.variable} h-full antialiased`}>
+      <body className="min-h-dvh bg-white text-[#111]">{children}</body>
     </html>
   );
 }

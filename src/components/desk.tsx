@@ -8,7 +8,6 @@ import {
   type Personality,
   type PlacePick,
 } from "@/lib/personality-places";
-import { Check, ChevronLeft } from "lucide-react";
 
 const QUESTION_STEPS = ["pace", "company", "comfort", "plan"] as const;
 const STEPS = ["cover", ...QUESTION_STEPS] as const;
@@ -220,30 +219,30 @@ export function Desk() {
   const footerDisabled = phase === "flow" && step !== "cover" && !ready(step, answers);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <header className="z-10 shrink-0 px-4 pt-[max(0.7rem,env(safe-area-inset-top))] sm:pt-12">
-        <div className="grid grid-cols-[5.2rem_minmax(0,1fr)_5.2rem] items-center">
+    <div className="flex min-h-0 flex-1 flex-col bg-white text-[#111]">
+      <header className="z-10 shrink-0 px-5 pt-[max(1.1rem,env(safe-area-inset-top))]">
+        <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-end">
           {canGoBack ? (
             <button
               type="button"
               onClick={goBack}
-              className="flex items-center gap-0.5 justify-self-start text-[15px] font-medium text-primary active:opacity-60"
+              className="justify-self-start pb-1 text-[11px] tracking-[0.22em] uppercase active:opacity-50"
             >
-              <ChevronLeft className="size-5" aria-hidden />
               Back
             </button>
           ) : (
             <span />
           )}
-          <p className="truncate text-center text-[13px] font-semibold tracking-[0.08em] text-foreground/80">
-            {phase === "results" ? "Shortlist" : "Halcyon"}
-          </p>
-          <p className="justify-self-end text-[13px] font-medium text-muted-foreground tabular-nums">
-            {questionIndex ? `${questionIndex} / 4` : ""}
+          <div className="flex flex-col items-center">
+            <p className="text-[12px] tracking-[0.42em] uppercase">Halcyon</p>
+            <span className="mt-2 h-px w-7 bg-[#e10600]" aria-hidden />
+          </div>
+          <p className="justify-self-end pb-1 text-[11px] tracking-[0.18em] tabular-nums">
+            {questionIndex ? `${String(questionIndex).padStart(2, "0")} / 04` : phase === "results" ? "04 / 04" : ""}
           </p>
         </div>
         <div
-          className={`mt-3 h-1 overflow-hidden rounded-full bg-black/10 ${showProgress ? "" : "invisible"}`}
+          className={`mt-4 h-px bg-black/15 ${showProgress ? "" : "invisible"}`}
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
@@ -251,7 +250,7 @@ export function Desk() {
           aria-label="Questions answered"
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+            className="h-px bg-[#111] transition-[width] duration-500 ease-out"
             style={{ width: `${Math.round(progress * 100)}%` }}
           />
         </div>
@@ -260,25 +259,25 @@ export function Desk() {
       <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto">
         <div
           key={`${phase}-${step}`}
-          className={`px-5 py-6 ${phase === "flow" ? "flex min-h-full flex-col justify-center" : ""} ${
+          className={`px-5 pt-10 pb-8 ${phase === "flow" ? "flex min-h-full flex-col justify-center" : ""} ${
             direction === "back" ? "step-back" : "step-forward"
           }`}
         >
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="font-heading text-[2rem] leading-[1.12] font-medium tracking-tight text-balance text-[oklch(0.2_0.02_55)] outline-none"
+            className="font-heading text-[2.7rem] leading-[0.92] font-normal tracking-[-0.03em] text-balance text-[#111] italic outline-none"
           >
             {prompt}
           </h1>
           {support ? (
-            <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{support}</p>
+            <p className="mt-5 max-w-[34ch] text-[13px] leading-relaxed text-[#111]/60">{support}</p>
           ) : null}
 
           {phase === "flow" && step === "cover" ? <CoverNotes /> : null}
 
           {choices ? (
-            <div className="mt-7 flex flex-col gap-2.5" role="radiogroup" aria-label={prompt}>
+            <div className="mt-10 border-t border-[#111]" role="radiogroup" aria-label={prompt}>
               {choices.map((choice, index) => (
                 <button
                   key={choice.id}
@@ -286,30 +285,17 @@ export function Desk() {
                   role="radio"
                   aria-checked={choice.selected}
                   onClick={() => choose(choice.next)}
-                  className={`flex w-full items-center gap-3 rounded-[1.15rem] px-3.5 py-3.5 text-left transition-[transform,background-color,color,box-shadow] duration-200 active:scale-[0.985] ${
-                    choice.selected
-                      ? "bg-primary text-primary-foreground shadow-[0_10px_28px_oklch(0.38_0.055_175_/_0.28)]"
-                      : "bg-white text-foreground shadow-[0_1px_0_oklch(0.2_0.02_60_/_0.04),0_10px_28px_oklch(0.3_0.02_60_/_0.06)]"
+                  className={`flex w-full items-baseline gap-4 border-b border-[#111] px-1 py-4 text-left ${
+                    choice.selected ? "bg-[#111] text-white" : "bg-white text-[#111]"
                   }`}
                 >
-                  <span
-                    className={`flex size-7 shrink-0 items-center justify-center rounded-[0.55rem] text-[12px] font-semibold ${
-                      choice.selected ? "bg-white/18" : "bg-foreground/[0.06] text-foreground/70"
-                    }`}
-                  >
-                    {letter(index)}
-                  </span>
+                  <span className="w-6 shrink-0 text-[11px] tracking-[0.18em]">{letter(index)}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[16px] leading-tight font-medium">{choice.label}</span>
-                    <span
-                      className={`mt-0.5 block text-[13px] leading-snug ${
-                        choice.selected ? "text-primary-foreground/75" : "text-muted-foreground"
-                      }`}
-                    >
+                    <span className="block text-[13px] tracking-[0.16em] uppercase">{choice.label}</span>
+                    <span className={`mt-1 block text-[12px] leading-snug ${choice.selected ? "text-white/65" : "text-[#111]/55"}`}>
                       {choice.hint}
                     </span>
                   </span>
-                  {choice.selected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
                 </button>
               ))}
             </div>
@@ -319,7 +305,7 @@ export function Desk() {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-black/5 bg-white/75 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <div className="shrink-0 border-t border-[#111] bg-white px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
           disabled={footerDisabled}
@@ -330,19 +316,13 @@ export function Desk() {
             }
             goForward();
           }}
-          className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_8px_20px_oklch(0.38_0.055_175_/_0.25)] transition-transform active:scale-[0.99] disabled:opacity-40"
+          className="flex h-12 w-full items-center justify-center bg-[#111] text-[11px] tracking-[0.28em] text-white uppercase disabled:opacity-30"
         >
           {continueLabel}
         </button>
-        {phase === "flow" ? (
-          <p className="mt-2 hidden text-center text-[11px] tracking-wide text-muted-foreground sm:block">
-            {choices ? "A to choose  ·  Enter to continue" : "Enter to continue"}
-          </p>
-        ) : (
-          <p className="mt-2 hidden text-center text-[11px] tracking-wide text-muted-foreground sm:block">
-            Back changes the last answer
-          </p>
-        )}
+        <p className={`mt-3 text-center text-[10px] tracking-[0.18em] text-[#111]/45 uppercase ${phase === "results" ? "" : "hidden sm:block"}`}>
+          {phase === "results" ? "Back changes the last answer" : choices ? "A to choose  ·  Enter to continue" : "Enter to continue"}
+        </p>
       </div>
     </div>
   );
@@ -373,14 +353,11 @@ function CoverNotes() {
     ["03", "A place, and why it fits"],
   ];
   return (
-    <ul className="mt-8 overflow-hidden rounded-[1.15rem] bg-white shadow-[0_1px_0_oklch(0.2_0.02_60_/_0.04),0_10px_28px_oklch(0.3_0.02_60_/_0.06)]">
-      {notes.map(([index, line], noteIndex) => (
-        <li
-          key={index}
-          className={`flex items-center gap-3 px-4 py-3.5 ${noteIndex < notes.length - 1 ? "border-b border-foreground/8" : ""}`}
-        >
-          <span className="w-7 font-heading text-[15px] text-primary">{index}</span>
-          <span className="text-[15px]">{line}</span>
+    <ul className="mt-12 border-t border-[#111]">
+      {notes.map(([index, line]) => (
+        <li key={index} className="flex items-baseline gap-6 border-b border-[#111] py-3.5">
+          <span className="w-7 text-[11px] tracking-[0.18em]">{index}</span>
+          <span className="text-[12px] tracking-[0.14em] uppercase">{line}</span>
         </li>
       ))}
     </ul>
@@ -389,20 +366,19 @@ function CoverNotes() {
 
 function Shortlist({ picks }: { picks: PlacePick[] }) {
   return (
-    <ol className="mt-6 flex flex-col gap-3">
+    <ol className="mt-10 border-t border-[#111]">
       {picks.map((pick, index) => (
-        <li
-          key={pick.place}
-          className="rounded-[1.15rem] bg-white px-4 py-4 shadow-[0_1px_0_oklch(0.2_0.02_60_/_0.04),0_10px_28px_oklch(0.3_0.02_60_/_0.06)]"
-        >
-          <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-            {String(index + 1).padStart(2, "0")} · British Airways Holidays
+        <li key={pick.place} className="border-b border-[#111] py-8">
+          <p className="text-[10px] tracking-[0.28em] uppercase">
+            {String(index + 1).padStart(2, "0")}
+            <span className="text-[#e10600]"> / </span>
+            British Airways Holidays
           </p>
-          <h2 className="mt-1 font-heading text-[1.7rem] leading-tight font-medium tracking-tight text-[oklch(0.2_0.02_55)]">
+          <h2 className="mt-3 font-heading text-[3rem] leading-[0.9] font-normal tracking-[-0.03em] text-[#111] italic">
             {pick.place}
           </h2>
-          <p className="mt-3 text-[11px] font-semibold tracking-[0.16em] text-primary uppercase">Why this place</p>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-foreground/80">{pick.why}</p>
+          <p className="mt-6 text-[10px] tracking-[0.28em] text-[#e10600] uppercase">Why this place</p>
+          <p className="mt-2 max-w-[36ch] text-[13px] leading-relaxed text-[#111]/75">{pick.why}</p>
         </li>
       ))}
     </ol>
