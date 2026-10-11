@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { extractPrice, parseLiteHtml, chooseHolidays } from "../src/lib/rank";
 import { plannedSearches, type Brief } from "../src/lib/brief";
+import { parseModelShortlist } from "../src/lib/ai-recommend";
 import { FLOW, recommendFromPersonality } from "../src/lib/personality-places";
 
 const mixed =
@@ -206,5 +207,73 @@ for (const blocked of ["Madeira", "Crete", "Paphos", "Maldives"]) {
   assert.equal(livelyNames.includes(blocked), false, blocked);
 }
 assert.notDeepEqual(livelyNames, quietNames);
+
+const shaped = parseModelShortlist(`
+Place: Paphos
+Why: A coastal town for a long swim with your sister, and the harbour stays quiet.
+Place: Madeira
+Why: Slow walks, and the queues you wanted to avoid are easy to miss.
+Place: Seville
+Why: Old streets for the two of you, with a late morning and no rush.
+`);
+assert.deepEqual(shaped?.map((pick) => pick.place), ["Paphos", "Madeira", "Seville"]);
+assert.match(shaped?.[0]?.why ?? "", /sister/);
+assert.equal(shaped?.[0]?.why.includes("£"), false);
+
+const markdown = parseModelShortlist(`
+1. **Name:** Berlin
+Why: Late streets for a group of friends. The fare is £400 and the flight is extra.
+2. **Name:** Madrid
+Why: A city that stays up, with no resort beach in sight.
+3. **Name:** Prague
+Why: Near enough for a short trip, and the nights stay lively.
+`);
+assert.deepEqual(markdown?.map((pick) => pick.place), ["Berlin", "Madrid", "Prague"]);
+assert.equal(markdown?.[0]?.why.includes("£"), false);
+assert.equal(/flight/i.test(markdown?.[0]?.why ?? "flight"), false);
+
+const niceHarbour = parseModelShortlist(`
+You wanted a nice harbour.
+Place: Paphos
+Why: A harbour town for a long swim with your sister.
+Place: Madeira
+Why: Quiet paths, and the queues stay away from the walk.
+Place: Lisbon
+Why: A morning city with a small harbour and a slow pace.
+`);
+assert.deepEqual(niceHarbour?.map((pick) => pick.place), ["Paphos", "Madeira", "Lisbon"]);
+
+const namedNice = parseModelShortlist(`
+Place: Nice
+Why: The promenade is the day, and the harbour is small.
+Place: Rome
+Why: A city morning with long walks and late lunches.
+Place: Paris
+Why: Streets you already loved, kept to a loose plan.
+`);
+assert.equal(namedNice?.[0]?.place, "Nice");
+
+const longNames = parseModelShortlist(`
+Place: New York
+Why: Full days in a city that stays up with your friends.
+Place: Las Vegas
+Why: Nights are the point, and the plan can stay loose.
+Place: St Lucia
+Why: A long journey to the sea, if the group wants water.
+`);
+assert.deepEqual(longNames?.map((pick) => pick.place), ["New York", "Las Vegas", "St Lucia"]);
+
+assert.equal(
+  parseModelShortlist(`
+Place: Berlin
+Why: The same sentence about nights and friends here now.
+Place: Madrid
+Why: The same sentence about nights and friends here now.
+Place: Prague
+Why: The same sentence about nights and friends here now.
+`),
+  null,
+);
+assert.equal(parseModelShortlist("Place: Berlin\nWhy: Only one place was written here today."), null);
 
 console.log("recommend checks passed");

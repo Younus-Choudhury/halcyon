@@ -525,6 +525,8 @@ const PLACES: Place[] = [
   },
 ];
 
+export const PLACE_NAMES = PLACES.map((place) => place.name);
+
 const SYNONYMS: Record<Tag, string[]> = {
   sea: ["sea", "seas", "beach", "beaches", "swim", "swimming", "swims", "coast", "harbour", "harbor", "sand", "ocean", "cove", "coves"],
   city: ["city", "cities", "street", "streets", "museum", "museums", "urban"],

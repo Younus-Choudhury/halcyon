@@ -1,6 +1,8 @@
 # Halcyon
 
-A holiday desk that shortlists three British Airways Holidays places from how you like to travel. It asks twelve questions: eight choices, then four you write yourself. The words you write change the places, and each reason quotes them. The shortlist appears at once.
+A holiday desk that asks twelve questions, then asks a language model to write three British Airways Holidays places and a reason for each. Eight questions are choices. Four are in your own words. The model reads those answers on the server. There are no prices and no live fare search.
+
+The model is Qwen2.5 1.5B Instruct, running locally through `@huggingface/transformers`. The first shortlist after install downloads the model into the transformers cache and can take a short while. Later shortlists reuse it.
 
 ## Run locally
 

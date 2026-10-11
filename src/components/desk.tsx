@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   FLOW,
   personalityLine,
-  recommendFromPersonality,
   type FlowQuestion,
   type HolidayAnswers,
   type PlacePick,
@@ -13,7 +12,7 @@ import {
 const STEPS = ["cover", ...FLOW.map((question) => question.id)] as const;
 
 type StepId = (typeof STEPS)[number];
-type Phase = "flow" | "results";
+type Phase = "flow" | "writing" | "results" | "failed";
 type Answers = {
   [Key in keyof HolidayAnswers]: HolidayAnswers[Key] | null;
 };
@@ -54,7 +53,7 @@ function isOpen(step: StepId): boolean {
 }
 
 function progressFor(step: StepId, phase: Phase): number {
-  if (phase === "results") return 1;
+  if (phase !== "flow") return 1;
   if (step === "cover") return 0;
   const index = FLOW.findIndex((item) => item.id === step);
   return (index + 1) / FLOW.length;
@@ -113,6 +112,8 @@ export function Desk() {
   const [step, setStep] = useState<StepId>("cover");
   const [phase, setPhase] = useState<Phase>("flow");
   const [direction, setDirection] = useState<"forward" | "back">("forward");
+  const [picks, setPicks] = useState<PlacePick[] | null>(null);
+  const [failure, setFailure] = useState("The shortlist was not written.");
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -121,6 +122,7 @@ export function Desk() {
   const stepRef = useRef(step);
   const answersRef = useRef(answers);
   const phaseRef = useRef(phase);
+  const requestRef = useRef(0);
 
   function cancelAdvance() {
     if (advanceTimer.current) {
@@ -132,13 +134,44 @@ export function Desk() {
   function finish(from: StepId) {
     const index = STEPS.indexOf(from);
     if (index >= STEPS.length - 1) {
-      if (!asHoliday(answersRef.current)) return;
-      setDirection("forward");
-      setPhase("results");
+      void submit();
       return;
     }
     setDirection("forward");
     setStep(STEPS[index + 1]);
+  }
+
+  async function submit() {
+    if (phaseRef.current === "writing") return;
+    const holiday = asHoliday(answersRef.current);
+    if (!holiday) return;
+    const id = requestRef.current + 1;
+    requestRef.current = id;
+    phaseRef.current = "writing";
+    setDirection("forward");
+    setPicks(null);
+    setPhase("writing");
+    try {
+      const response = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(holiday),
+      });
+      const body = (await response.json()) as { places?: PlacePick[]; error?: string };
+      if (requestRef.current !== id) return;
+      const places = Array.isArray(body.places) ? body.places.filter(isPick).slice(0, 3) : [];
+      if (!response.ok || places.length < 3) {
+        setFailure(body.error || "The shortlist was not written.");
+        setPhase("failed");
+        return;
+      }
+      setPicks(places);
+      setPhase("results");
+    } catch {
+      if (requestRef.current !== id) return;
+      setFailure("The shortlist was not written.");
+      setPhase("failed");
+    }
   }
 
   function scheduleAdvance(from: StepId) {
@@ -191,7 +224,9 @@ export function Desk() {
 
   function goBack() {
     cancelAdvance();
-    if (phaseRef.current === "results") {
+    if (phaseRef.current !== "flow") {
+      requestRef.current += 1;
+      setPicks(null);
       setPhase("flow");
       setDirection("back");
       setStep("loved");
@@ -205,7 +240,9 @@ export function Desk() {
 
   function startAgain() {
     cancelAdvance();
+    requestRef.current += 1;
     setAnswers(INITIAL_ANSWERS);
+    setPicks(null);
     setPhase("flow");
     setDirection("back");
     setStep("cover");
@@ -224,7 +261,11 @@ export function Desk() {
         const target = event.target as HTMLElement | null;
         if (target?.closest("a, button, input, textarea")) return;
         event.preventDefault();
-        if (phase === "results") return;
+        if (phase === "writing" || phase === "results") return;
+        if (phase === "failed") {
+          void submit();
+          return;
+        }
         goForward();
         return;
       }
@@ -248,7 +289,6 @@ export function Desk() {
   });
 
   const holiday = asHoliday(answers);
-  const picks = phase === "results" && holiday ? recommendFromPersonality(holiday) : null;
   const choices = phase === "flow" ? choicesFor(answers, step) : null;
   const openQuestion = phase === "flow" && isOpen(step) ? questionAt(step) : null;
   const showProgress = !(phase === "flow" && step === "cover");
@@ -256,9 +296,10 @@ export function Desk() {
   const questionIndex = phase === "flow" && step !== "cover" ? FLOW.findIndex((item) => item.id === step) + 1 : null;
   const canGoBack = phase === "results" || step !== "cover";
   const prompt = screenPrompt(step, phase);
-  const support = screenSupport(step, phase, holiday);
-  const continueLabel = phase === "results" ? "Start again" : step === "cover" ? "Start" : "Continue";
-  const footerDisabled = phase === "flow" && step !== "cover" && !ready(step, answers);
+  const support = screenSupport(step, phase, holiday, failure);
+  const continueLabel =
+    phase === "results" ? "Start again" : phase === "failed" ? "Try again" : phase === "writing" ? "Writing" : step === "cover" ? "Start" : "Continue";
+  const footerDisabled = phase === "writing" || (phase === "flow" && step !== "cover" && !ready(step, answers));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-white text-[#111]">
@@ -280,7 +321,7 @@ export function Desk() {
             <span className="mt-2 h-px w-7 bg-[#e10600]" aria-hidden />
           </div>
           <p className="justify-self-end pb-1 text-[11px] tracking-[0.18em] tabular-nums">
-            {questionIndex ? `${String(questionIndex).padStart(2, "0")} / 12` : phase === "results" ? "12 / 12" : ""}
+            {questionIndex ? `${String(questionIndex).padStart(2, "0")} / 12` : phase !== "flow" ? "12 / 12" : ""}
           </p>
         </div>
         <div
@@ -359,7 +400,8 @@ export function Desk() {
             </label>
           ) : null}
 
-          {picks ? <Shortlist picks={picks} /> : null}
+          {phase === "writing" ? <WritingMarks /> : null}
+          {phase === "results" && picks ? <Shortlist picks={picks} /> : null}
         </div>
       </div>
 
@@ -372,42 +414,56 @@ export function Desk() {
               startAgain();
               return;
             }
+            if (phase === "failed") {
+              void submit();
+              return;
+            }
             goForward();
           }}
           className="flex h-12 w-full items-center justify-center bg-[#111] text-[11px] tracking-[0.28em] text-white uppercase disabled:opacity-30"
         >
           {continueLabel}
         </button>
-        <p className={`mt-3 text-center text-[10px] tracking-[0.18em] text-[#111]/45 uppercase ${phase === "results" || isOpen(step) ? "" : "hidden sm:block"}`}>
-          {phase === "results"
-            ? "Back changes the last answer"
-            : isOpen(step)
-              ? "A sentence, then continue"
-              : isChoice(step)
-                ? "A to choose  ·  Enter to continue"
-                : "Enter to continue"}
+        <p className={`mt-3 text-center text-[10px] tracking-[0.18em] text-[#111]/45 uppercase ${phase !== "flow" || isOpen(step) ? "" : "hidden sm:block"}`}>
+          {phase === "writing"
+            ? "A model is writing the three places"
+            : phase === "results" || phase === "failed"
+              ? "Back changes the last answer"
+              : isOpen(step)
+                ? "A sentence, then continue"
+                : isChoice(step)
+                  ? "A to choose  ·  Enter to continue"
+                  : "Enter to continue"}
         </p>
       </div>
     </div>
   );
 }
 
+function isPick(value: PlacePick): value is PlacePick {
+  return Boolean(value && typeof value.place === "string" && typeof value.why === "string" && value.why.length > 0);
+}
+
 function screenPrompt(step: StepId, phase: Phase): string {
+  if (phase === "writing") return "Writing your shortlist.";
+  if (phase === "failed") return "The shortlist was not written.";
   if (phase === "results") return "Your shortlist.";
   if (step === "cover") return "Where should you go?";
   return questionAt(step)?.prompt ?? "";
 }
 
-function screenSupport(step: StepId, phase: Phase, holiday: HolidayAnswers | null): string | null {
+function screenSupport(step: StepId, phase: Phase, holiday: HolidayAnswers | null, failure: string): string | null {
+  if (phase === "writing") return "A model is reading your twelve answers.";
+  if (phase === "failed") return failure;
   if (phase === "results" && holiday) {
-    return `${personalityLine(holiday)} These three British Airways Holidays places follow your twelve answers.`;
+    return `${personalityLine(holiday)} A language model on this server wrote these three places from your answers.`;
   }
   if (step === "cover") {
-    return "Eight choices, then four things you write. Three British Airways Holidays places, and a reason that uses your words.";
+    return "Eight choices, then four things you write. A language model writes three British Airways Holidays places from those answers.";
   }
   const question = questionAt(step);
   if (question?.kind === "open") return question.support;
-  if (question?.kind === "choice") return "This answer is part of what chooses the shortlist.";
+  if (question?.kind === "choice") return "This answer is part of what the model reads.";
   return null;
 }
 
@@ -415,7 +471,7 @@ function CoverNotes() {
   const notes = [
     ["01", "Eight choices"],
     ["02", "Four answers in your words"],
-    ["03", "A place, and why it fits"],
+    ["03", "A model writes three places"],
   ];
   return (
     <ul className="mt-12 border-t border-[#111]">
@@ -426,6 +482,23 @@ function CoverNotes() {
         </li>
       ))}
     </ul>
+  );
+}
+
+function WritingMarks() {
+  return (
+    <ol className="mt-10 border-t border-[#111]">
+      {["01", "02", "03"].map((index) => (
+        <li key={index} className="border-b border-[#111] py-8">
+          <p className="text-[10px] tracking-[0.28em] uppercase">
+            {index}
+            <span className="text-[#e10600]"> / </span>
+            Writing
+          </p>
+          <p className="mt-3 font-heading text-[2rem] leading-none text-[#111]/25 italic">—</p>
+        </li>
+      ))}
+    </ol>
   );
 }
 

@@ -16,7 +16,7 @@ const bodoni = Bodoni_Moda({
 export const metadata: Metadata = {
   title: "Halcyon — a holiday desk",
   description:
-    "Twelve questions, eight choices and four in your own words, then three British Airways Holidays places.",
+    "Twelve questions. A language model on this server writes three British Airways Holidays places from the answers.",
 };
 
 export const viewport: Viewport = {
