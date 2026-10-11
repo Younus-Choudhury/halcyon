@@ -21,7 +21,7 @@ const MORNINGS: Morning[] = ["late", "early", "either"];
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-const OPENROUTER_KEY = "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";
+const OPENROUTER_KEY = "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";
 
 type ChatTurn = { role: "system" | "user"; content: string };
 
