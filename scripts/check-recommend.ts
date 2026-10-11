@@ -146,10 +146,6 @@ for (const blocked of ["Barcelona", "New York", "Las Vegas", "Dubai", "Berlin"])
 }
 for (const pick of quietPersonality) {
   assert.match(pick.why, new RegExp(pick.place));
-  assert.match(pick.why, /slow days/);
-  assert.match(pick.why, /quiet company/);
-  assert.match(pick.why, /simple room/);
-  assert.match(pick.why, /loose plan/);
   assert.match(pick.why, /sister/);
   assert.match(pick.why, /swim/);
   assert.match(pick.why, /queues/);

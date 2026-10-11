@@ -638,13 +638,13 @@ function quote(text: string): string {
 }
 
 function whyFor(place: Place, answers: HolidayAnswers): string {
+  const named = namesPlace(answers.loved, place.name);
   return [
-    `${place.name} is on your shortlist because you want ${wants(answers)}.`,
-    place.because,
-    `You are going for ${quote(answers.travellingFor)}.`,
-    `You want to remember ${quote(answers.remember)}.`,
-    `It would be ruined by ${quote(answers.avoid)}.`,
-    `You pointed towards ${quote(answers.loved)}.`,
+    `${place.name}. ${place.because}`,
+    `This is for ${quote(answers.travellingFor)}.`,
+    `You wanted to remember ${quote(answers.remember)}.`,
+    `You did not want ${quote(answers.avoid)}.`,
+    named ? `You named ${place.name}.` : `You wrote ${quote(answers.loved)}.`,
   ].join(" ");
 }
 
